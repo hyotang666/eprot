@@ -338,17 +338,48 @@
 
 ;;;; Arguments and Values:
 
-; form := 
+; form := t
 
-; environment := 
+; environment := (or null environment), otherwise implementation dependent condition will be signaled.
+#?(macroexpand-1 t "not env") :signals condition
 
-; result := 
+; result 1 := t
+
+; result 2 := boolean
+
+; If the FORM is a macro-call-form, the expanded form and T is returned.
+#?(macroexpand-1 '(macro)
+		 (augment-environment nil
+				       :macro (list (list 'macro
+							  (enclose
+							    (parse-macro 'macro () '('hoge)))))))
+:values (HOGE T)
+
+; Otherwise the FORM and NIL is returned.
+#?(macroexpand-1 '(macro)) :values ((MACRO) NIL)
 
 ;;;; Affected By:
+; *MACROEXPAND-HOOK*
+#?(let ((*macroexpand-hook*
+	  (lambda (expander form env)
+	    (declare (ignore expander form env))
+	    :this-is-returned-as-expanded-result)))
+    (macroexpand-1 '(macro)
+		   (augment-environment nil
+					:macro (list (list 'macro
+							   (enclose
+							     (parse-macro 'macro () '('hoge))))))))
+:values (:THIS-IS-RETURNED-AS-EXPANDED-RESULT T)
 
 ;;;; Side-Effects:
+; none
 
 ;;;; Notes:
+; Symbol macro is also treated.
+#?(macroexpand-1 'symbol-macro
+		 (augment-environment nil
+				      :symbol-macro '((symbol-macro :expanded))))
+:values (:EXPANDED T)
 
 ;;;; Exceptional-Situations:
 
