@@ -136,19 +136,27 @@
 (defun augment-environment
        (env &key variable symbol-macro function macro declare)
   ;; Trivial type checks.
-  (policy-cond:policy-cond
-    ((< 0 safety)
-     (assert (every (lambda (elt) (typep elt 'var-name)) variable) ())
-     (assert (every (lambda (elt) (typep elt '(cons var-name (cons t null))))
-                    symbol-macro)
-       ())
-     (assert (every (lambda (elt) (typep elt 'function-name)) function))
-     (assert (every
-               (lambda (elt)
-                 (typep elt '(cons function-name (cons function null))))
-               macro))
-     (assert (every (lambda (elt) (typep elt '(cons symbol t))) declare)))
-    (t nil))
+  #.(let ((assertions
+           '((assert (every (lambda (elt) (typep elt 'var-name)) variable) ())
+             (assert (every
+                       (lambda (elt)
+                         (typep elt '(cons var-name (cons t null))))
+                       symbol-macro)
+               ())
+             (assert (every (lambda (elt) (typep elt 'function-name))
+                            function))
+             (assert (every
+                       (lambda (elt)
+                         (typep elt
+                                '(cons function-name (cons function null))))
+                       macro))
+             (assert (every (lambda (elt) (typep elt '(cons symbol t)))
+                            declare)))))
+      (or #+(or sbcl lispworks cmucl ccl allegro) ; policy-cond supported.
+          `(policy-cond:policy-cond
+             ((< 0 safety) ,@assertions)
+             (t nil)) ; The default.
+          `(progn ,@assertions)))
   ;; CLTL2 require these error checks.
   (let ((intersect (intersection variable (mapcar #'car symbol-macro))))
     (when intersect
@@ -266,7 +274,7 @@
              (gensym "ENVIRONMENT"))))
     `(lambda (,?form ,?env)
        ,@(unless (symbol-package ?env)
-	   `((declare (ignore ,?env))))
+           `((declare (ignore ,?env))))
        (destructuring-bind
            ,(lambda-fiddle:remove-environment-part
               (lambda-fiddle:remove-whole-part lambda-list))
