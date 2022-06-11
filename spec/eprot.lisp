@@ -148,6 +148,52 @@
 
 ;;;; Exceptional-Situations:
 
+(requirements-about FUNCTION-INFORMATION :doc-type function)
+
+;;;; Description:
+
+#+syntax (FUNCTION-INFORMATION FUN-NAME &OPTIONAL ENV) ; => result
+
+;;;; Arguments and Values:
+
+; fun-name := symbol, otherwise implementation dependent condition will be signaled.
+#?(function-information "not symbol") :signals condition
+
+; env := (or null environment), otherwise implementation dependent condition will be signaled.
+#?(function-information 'dummy "not env") :signals condition
+
+; result 1 := (member :special-form :macro :function nil)
+; TODO case :special-form.
+; If FUN-NAME is specified as macro, :MACRO will be returned.
+#?(function-information 'name
+			(augment-environment nil :macro `((name ,#'car))))
+:values (:MACRO T NIL)
+; If FUN-NAME is specified as function, :FUNCTION will be returned.
+#?(function-information 'name
+			(augment-environment nil :function '(name)))
+:values (:FUNCTION T NIL)
+; Otherwise NIL is returned.
+#?(function-information 'name) :values (NIL NIL NIL)
+
+; result 2 := boolean, when FUN-NAME exists in ENVIRONMENT as function, true. Otherwise NIL.
+
+; result 3 := list
+; If FUN-NAME has declarations, such declarations are returned.
+#?(function-information 'name
+			(augment-environment nil :function '(name)
+					     :declare '((ftype (function * fixnum) name))))
+:values (:FUNCTION T ((FTYPE . (FUNCTION * FIXNUM))))
+
+;;;; Affected By:
+; none
+
+;;;; Side-Effects:
+; none
+
+;;;; Notes:
+
+;;;; Exceptional-Situations:
+
 (requirements-about MACRO-FUNCTION :doc-type function)
 
 ;;;; Description:
@@ -226,32 +272,6 @@
 ;;;; Affected By:
 
 ;;;; Notes:
-
-(requirements-about FUNCTION-INFORMATION :doc-type function)
-
-;;;; Description:
-
-#+syntax (FUNCTION-INFORMATION FUN-NAME &OPTIONAL ENV) ; => result
-
-;;;; Arguments and Values:
-
-; fun-name := symbol
-
-; env := (or null environment)
-
-; result 1 := (member :special-form :macro :function nil)
-
-; result 2 := boolean
-
-; result 3 := list
-
-;;;; Affected By:
-
-;;;; Side-Effects:
-
-;;;; Notes:
-
-;;;; Exceptional-Situations:
 
 (requirements-about DECLARATION-INFORMATION :doc-type function)
 
