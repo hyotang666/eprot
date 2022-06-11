@@ -214,8 +214,10 @@
 (defun variable-information (var-name &optional env)
   ;; CLTL2 recommends there error checks.
   #-sbcl
-  (unless (typep env '(or null environment))
-    (error 'type-error :datum env :expected-type '(or null environment)))
+  (progn
+   (check-type var-name var-name)
+   (unless (typep env '(or null environment))
+     (error 'type-error :datum env :expected-type '(or null environment))))
   (if (constantp var-name)
       (values :constant t nil)
       (do-env (e env #|FIXME|# (values nil nil nil))
@@ -236,8 +238,10 @@
 (defun function-information (fun-name &optional env)
   ;; CLTL2 recommends there error checks.
   #-sbcl
-  (unless (typep env '(or null environment))
-    (error 'type-error :datum env :expected-type '(or null environment)))
+  (progn
+   (check-type fun-name function-name)
+   (unless (typep env '(or null environment))
+     (error 'type-error :datum env :expected-type '(or null environment))))
   (do-env (e env #|FIXME|# (values nil nil nil))
     (when (find fun-name (environment-function e))
       (return (values :function t (related-declarations `#',fun-name e))))
@@ -249,8 +253,10 @@
 (defun declaration-information (decl-name &optional env)
   ;; CLTL2 recommends there error checks.
   #-sbcl
-  (unless (typep env '(or null environment))
-    (error 'type-error :datum env :expected-type '(or null environment)))
+  (progn
+   (check-type decl-name declaration-name)
+   (unless (typep env '(or null environment))
+     (error 'type-error :datum env :expected-type '(or null environment))))
   (do-env (e env)
     (tcr.parse-declarations-1.0::do-declspec (spec (environment-declare env))
       (when (eq decl-name
@@ -267,6 +273,11 @@
 
 (defun parse-macro (name lambda-list body &optional env)
   (declare (ignore env))
+  #+(or clisp)
+  (progn
+   (check-type name macro-name)
+   (check-type body list)
+   (check-type env (or null environment)))
   (let ((?form
          (or (lambda-fiddle:whole-lambda-var lambda-list) (gensym "WHOLE")))
         (?env
@@ -285,11 +296,15 @@
 
 (defun enclose (lambda-expression &optional env)
   (declare (ignore env))
+  #+(or clisp)
+  (progn (check-type env (or null environment)))
   (coerce lambda-expression 'function))
 
 ;;;; MACRO-FUNCTION
 
 (defun macro-function (symbol &optional environment)
+  #+(or clisp)
+  (progn (check-type symbol symbol))
   (do-env (e environment)
     (let ((definition (assoc symbol (environment-macro e))))
       (return (cadr definition)))))

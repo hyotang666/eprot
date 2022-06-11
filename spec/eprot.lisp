@@ -99,7 +99,7 @@
 
 ; result 1 := (member :constant :symbol-macro :lexical :special nil)
 ; When VAR-NAME names constant, :CONSTANT will be returned.
-#?(variable-information 'pi) => :constant
+#?(variable-information 'most-positive-fixnum) => :constant
 ; When VAR-NAME is keyword symbol, :CONSTANT will be returned.
 #?(variable-information :keyword) => :constant
 ; When VAR-NAME is specified as symbol-macro, :SYMBOL-MACRO will be returned.
