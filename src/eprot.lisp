@@ -274,10 +274,9 @@
 (defun parse-macro (name lambda-list body &optional env)
   (declare (ignore env))
   #+(or clisp)
-  (progn
-   (check-type name macro-name)
-   (check-type body list)
-   (check-type env (or null environment)))
+  (progn (check-type name macro-name) (check-type body list))
+  #+(or clisp cmucl)
+  (check-type env (or null environment))
   (let ((?form
          (or (lambda-fiddle:whole-lambda-var lambda-list) (gensym "WHOLE")))
         (?env
@@ -296,7 +295,7 @@
 
 (defun enclose (lambda-expression &optional env)
   (declare (ignore env))
-  #+(or clisp)
+  #+(or clisp cmucl)
   (progn (check-type env (or null environment)))
   (coerce lambda-expression 'function))
 
