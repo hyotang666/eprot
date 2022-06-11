@@ -2,11 +2,12 @@
 (in-package :asdf)
 (defsystem "eprot"
   :version
-  "0.7.7"
+  "0.8.0"
   :depends-on
   (
    "policy-cond"        ; Control flow macro that interprets declaration information.
    "lambda-fiddle"      ; Lambda list handling.
+   "parse-declarations-1.0" ; Declaration parser.
    )
   :pathname
   "src/"

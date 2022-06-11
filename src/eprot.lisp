@@ -55,7 +55,7 @@
   (symbol-macro nil :type list :read-only t)
   (function nil :type list :read-only t)
   (macro nil :type list :read-only t)
-  (declare nil :type list :read-only t)
+  (declare nil :type tcr.parse-declarations-1.0:declaration-env :read-only t)
   (next nil :type (or null environment) :read-only t))
 
 (defmethod print-object ((o environment) output)
@@ -174,31 +174,48 @@
                     :symbol-macro symbol-macro
                     :function function
                     :macro macro
-                    :declare declare
+                    :declare (tcr.parse-declarations-1.0:parse-declarations
+                               `((declare ,@declare)))
                     :next env))
 
 ;;;; ACCESSOR.
 ;;; VARIABLE-INFORMATION.
+
+(defun related-declarations (var-name env)
+  (uiop:while-collecting (acc)
+    (tcr.parse-declarations-1.0::do-declspec (spec (environment-declare env))
+      (if (find var-name
+                (tcr.parse-declarations-1.0::declspec.affected-variables spec)
+                :test #'equal)
+          (case (tcr.parse-declarations-1.0::declspec.identifier spec)
+            ((type ftype)
+             (acc
+              (cons (tcr.parse-declarations-1.0::declspec.identifier spec)
+                    (tcr.parse-declarations-1.0::declspec.context spec))))
+            (otherwise
+             (acc
+              (cons (tcr.parse-declarations-1.0::declspec.identifier spec)
+                    t))))))))
 
 (defun variable-information (var-name &optional env)
   ;; CLTL2 recommends there error checks.
   #-sbcl
   (unless (typep env '(or null environment))
     (error 'type-error :datum env :expected-type '(or null environment)))
-  (flet ((declared-specialp (declare)
-           (and (eq 'special (car declare)) (find var-name (cdr declare)))))
-    (if (constantp var-name)
-        (values :constant t nil)
-        (do-env (e env #|FIXME|# (values nil nil nil))
-          (when (find var-name (environment-variable e))
+  (if (constantp var-name)
+      (values :constant t nil)
+      (do-env (e env #|FIXME|# (values nil nil nil))
+        (when (find var-name (environment-variable e))
+          (let ((decls (related-declarations var-name e)))
             (return
-             (values (if (find-if #'declared-specialp (environment-declare e))
+             (values (if (assoc 'special decls)
                          :special
                          :lexical)
                      t
-                     (environment-declare e))))
-          (when (assoc var-name (environment-symbol-macro e))
-            (return (values :symbol-macro t (environment-declare e))))))))
+                     decls))))
+        (when (assoc var-name (environment-symbol-macro e))
+          (return
+           (values :symbol-macro t (related-declarations var-name e)))))))
 
 ;;; FUNCTION-INFORMATION.
 
@@ -209,9 +226,9 @@
     (error 'type-error :datum env :expected-type '(or null environment)))
   (do-env (e env #|FIXME|# (values nil nil nil))
     (when (find fun-name (environment-function e))
-      (return (values :function t (environment-declare e))))
+      (return (values :function t (related-declarations `#',fun-name e))))
     (when (assoc fun-name (environment-macro e))
-      (return (values :macro t (environment-declare e))))))
+      (return (values :macro t (related-declarations `#',fun-name e))))))
 
 ;;; DECLARATION-INFORMATION
 
@@ -221,12 +238,16 @@
   (unless (typep env '(or null environment))
     (error 'type-error :datum env :expected-type '(or null environment)))
   (do-env (e env)
-    (let ((declare
-           (remove-if-not decl-name (environment-declare e) :key #'car)))
-      (when declare
-        (return
-         (loop :for info :in declare
-               :collect (cdr info)))))))
+    (tcr.parse-declarations-1.0::do-declspec (spec (environment-declare env))
+      (when (eq decl-name
+                (tcr.parse-declarations-1.0::declspec.identifier spec))
+        (case (tcr.parse-declarations-1.0::declspec.identifier spec)
+          ((dynamic-extent ftype ignore ignorable inline notinline special
+            type)
+           nil)
+          (otherwise
+           (return-from declaration-information
+             (tcr.parse-declarations-1.0::build-declspec spec))))))))
 
 ;;;; PARSE-MACRO
 
