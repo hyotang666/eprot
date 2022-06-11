@@ -14,6 +14,7 @@
            #:parse-macro
            #:enclose)
   (:export ; EPROT things.
+           #:environment
            #:*environment*))
 
 (in-package :eprot)
