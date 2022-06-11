@@ -317,6 +317,19 @@
 
 ;;;; Exceptional-Situations:
 
+(requirements-about *MACROEXPAND-HOOK* :doc-type variable)
+
+;;;; Description:
+
+;;;; Value type is (or symbol function)
+#? *MACROEXPAND-HOOK* :be-the (or symbol function)
+
+; Initial value is `FUNCALL`
+
+;;;; Affected By:
+
+;;;; Notes:
+
 (requirements-about MACROEXPAND-1 :doc-type function)
 
 ;;;; Description:
@@ -360,19 +373,6 @@
 ;;;; Notes:
 
 ;;;; Exceptional-Situations:
-
-(requirements-about *MACROEXPAND-HOOK* :doc-type variable)
-
-;;;; Description:
-
-;;;; Value type is SYMBOL
-;#? *MACROEXPAND-HOOK* :be-the ???
-
-; Initial value is `FUNCALL`
-
-;;;; Affected By:
-
-;;;; Notes:
 
 (requirements-about *ENVIRONMENT* :doc-type variable)
 
