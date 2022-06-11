@@ -74,6 +74,14 @@
 ;;;; Notes:
 
 ;;;; Exceptional-Situations:
+; If a same symbol exists in :variable and :symbol-macro, a program-error will be signaled.
+#?(augment-environment nil :variable '(a) :symbol-macro '((a :def))) :signals program-error
+; If a symbol-macro also specified as special, a program-error will be signaled.
+#?(augment-environment nil :symbol-macro '((a :def)) :declare '((special a)))
+:signals program-error
+; If a function also specified as macro, a program-error will be signaled.
+#?(augment-environment nil :function '(a) :macro `((a ,#'car)))
+:signals program-error
 
 (requirements-about VARIABLE-INFORMATION :doc-type function)
 
