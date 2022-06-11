@@ -153,7 +153,9 @@
            (loop :for (name . specs) :in spec
                  :if (eq 'special name)
                    :append specs)))
-    (let ((intersect (intersection symbol-macro (declared-special declare))))
+    (let ((intersect
+           (intersection (mapcar #'car symbol-macro)
+                         (declared-special declare))))
       (when intersect
         (error 'simple-program-error
                :format-control "You could not declare symbol-macro as special. ~S"
