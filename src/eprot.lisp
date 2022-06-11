@@ -2,7 +2,7 @@
 
 (defpackage :eprot
   (:use :cl)
-  (:shadow macro-function)
+  (:shadow macro-function macroexpand-1)
   (:export))
 
 (in-package :eprot)
@@ -11,7 +11,6 @@
 #|
 * defmacro
 * *macroexpand-hook*
-* macroexpand-1
 * macroexpand
 * define-declaration
 * flet
@@ -245,3 +244,22 @@
   (do-env (e environment)
     (let ((definition (assoc symbol (environment-macro e))))
       (return (cadr definition)))))
+
+;;;; MACROEXPAND-1
+
+(defun macroexpand-1 (form &optional environment)
+  (if (symbolp form)
+      (let ((exists?
+             (do-env (e environment)
+               (let ((definition (assoc form (environment-symbol-macro e))))
+                 (when definition
+                   (return (cadr definition)))))))
+        (if exists?
+            (values exists? t)
+            (values form nil)))
+      (if (atom form)
+          (values form nil)
+          (let ((expander (macro-function (car form) environment)))
+            (if expander
+                (values (funcall expander form environment) t)
+                (values form nil))))))
