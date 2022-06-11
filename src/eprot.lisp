@@ -131,7 +131,7 @@
        (env &key variable symbol-macro function macro declare)
   ;; Trivial type checks.
   (policy-cond:policy-cond
-    ((< speed safety)
+    ((< 0 safety)
      (assert (every (lambda (elt) (typep elt 'var-name)) variable) ())
      (assert (every (lambda (elt) (typep elt '(cons var-name (cons t null))))
                     symbol-macro)
