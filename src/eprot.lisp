@@ -176,7 +176,7 @@
     (error 'type-error :datum env :expected-type '(or null environment)))
   (flet ((declared-specialp (declare)
            (and (eq 'special (car declare)) (find var-name (cdr declare)))))
-    (if (keywordp var-name)
+    (if (constantp var-name)
         (values :constant t nil)
         (do-env (e env #|FIXME|# (values nil nil nil))
           (when (find var-name (environment-variable e))
