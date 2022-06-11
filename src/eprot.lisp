@@ -210,7 +210,7 @@
   (do-env (e env #|FIXME|# (values nil nil nil))
     (when (find fun-name (environment-function e))
       (return (values :function t (environment-declare e))))
-    (when (find fun-name (environment-macro e))
+    (when (assoc fun-name (environment-macro e))
       (return (values :macro t (environment-declare e))))))
 
 ;;; DECLARATION-INFORMATION
