@@ -12,7 +12,10 @@
   :pathname
   "src/"
   :components
-  ((:file "eprot")))
+  ((:file "eprot"))
+  :author "SATO Shinichi"
+  :license "MIT"
+  :description "General purpose CLTL2 compatible environment protocol.")
 
 ;;; These forms below are added by JINGOH.GENERATOR.
 ;; Ensure in ASDF for pretty printings.
