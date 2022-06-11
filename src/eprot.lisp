@@ -160,7 +160,7 @@
         (error 'simple-program-error
                :format-control "You could not declare symbol-macro as special. ~S"
                :format-arguments (list intersect)))))
-  (let ((intersect (intersection function macro)))
+  (let ((intersect (intersection function (mapcar #'car macro))))
     (when intersect
       (error 'simple-program-error
              :format-control "You could not the same name for function and macro. ~S"
