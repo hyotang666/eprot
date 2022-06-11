@@ -2,8 +2,19 @@
 
 (defpackage :eprot
   (:use :cl)
-  (:shadow macro-function macroexpand-1 macroexpand *macroexpand-hook*)
-  (:export))
+  (:shadow . #0=(macro-function macroexpand-1 macroexpand *macroexpand-hook*))
+  (:export ; cl things.
+           .
+           #0#)
+  (:export ; cltl2 things.
+           #:augment-environment
+           #:variable-information
+           #:function-information
+           #:declaration-information
+           #:parse-macro
+           #:enclose)
+  (:export ; EPROT things.
+           #:*environment*))
 
 (in-package :eprot)
 
