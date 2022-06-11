@@ -144,7 +144,7 @@
      (assert (every (lambda (elt) (typep elt '(cons symbol t))) declare)))
     (t nil))
   ;; CLTL2 require these error checks.
-  (let ((intersect (intersection variable symbol-macro)))
+  (let ((intersect (intersection variable (mapcar #'car symbol-macro))))
     (when intersect
       (error 'simple-program-error
              :format-control "You could not specifay the same name for variable and symbol-macro. ~S"
