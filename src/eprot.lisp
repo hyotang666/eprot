@@ -141,7 +141,7 @@
                (lambda (elt)
                  (typep elt '(cons function-name (cons function null))))
                macro))
-     (assert (every (lambda (elt) (typep elt 'declaration-name)) declare)))
+     (assert (every (lambda (elt) (typep elt '(cons symbol t))) declare)))
     (t nil))
   ;; CLTL2 require these error checks.
   (let ((intersect (intersection variable symbol-macro)))
