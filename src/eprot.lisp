@@ -124,7 +124,10 @@
         enclose)
  (ftype (function (symbol &optional (or null environment))
          (values (or null function) &optional))
-        macro-function))
+        macro-function)
+ (ftype (function (t &optional (or null environment))
+         (values t boolean &optional))
+        macroexpand-1))
 
 ;;;; IMPLEMENTATIONS
 ;;;; CONSTRUCTOR.
