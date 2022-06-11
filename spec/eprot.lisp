@@ -194,6 +194,32 @@
 
 ;;;; Exceptional-Situations:
 
+(requirements-about DECLARATION-INFORMATION :doc-type function)
+
+;;;; Description:
+
+#+syntax (DECLARATION-INFORMATION DECL-NAME &OPTIONAL ENV) ; => result
+
+;;;; Arguments and Values:
+
+; decl-name := symbol, otherwise implementation dependent condition will be signaled.
+#?(declaration-information "not symbol") :signals condition
+
+; env := (or null environment), otherwise implementation dependent condition will be signaled.
+#?(declaration-information nil "not env") :signals condition
+
+; result := t
+
+;;;; Affected By:
+; none
+
+;;;; Side-Effects:
+; none
+
+;;;; Notes:
+
+;;;; Exceptional-Situations:
+
 (requirements-about MACRO-FUNCTION :doc-type function)
 
 ;;;; Description:
@@ -272,28 +298,6 @@
 ;;;; Affected By:
 
 ;;;; Notes:
-
-(requirements-about DECLARATION-INFORMATION :doc-type function)
-
-;;;; Description:
-
-#+syntax (DECLARATION-INFORMATION DECL-NAME &OPTIONAL ENV) ; => result
-
-;;;; Arguments and Values:
-
-; decl-name := symbol
-
-; env := (or null environment)
-
-; result := t
-
-;;;; Affected By:
-
-;;;; Side-Effects:
-
-;;;; Notes:
-
-;;;; Exceptional-Situations:
 
 (requirements-about PARSE-MACRO :doc-type function)
 
