@@ -2,6 +2,7 @@
 
 (defpackage :eprot
   (:use :cl)
+  (:shadow macro-function)
   (:export))
 
 (in-package :eprot)
@@ -19,7 +20,6 @@
 * let*
 * macrolet
 * symbol-macrolet
-* macro-function
 * define-compiler-macro
 * compiler-macro-function
 * compiler-macroexpand-1
@@ -238,3 +238,10 @@
 (defun enclose (lambda-expression &optional env)
   (declare (ignore env))
   (coerce lambda-expression 'function))
+
+;;;; MACRO-FUNCTION
+
+(defun macro-function (symbol &optional environment)
+  (do-env (e environment)
+    (let ((definition (assoc symbol (environment-macro e))))
+      (return (cadr definition)))))
