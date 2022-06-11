@@ -293,15 +293,25 @@
 
 ;;;; Arguments and Values:
 
-; symbol := 
+; symbol := symbol, otherwise implementation dependent condition will be signaled.
+#?(macro-function "not-symbol") :signals condition
+; If SYMBOL is specified as a macro in the ENVIRONMENT, its expand function is returned.
+#?(macro-function 'name (augment-environment nil
+					     :macro `((name ,#'car))))
+:equivalents #'car
+; otherwise NIL.
+#?(macro-function 'name) => NIL
 
-; environment := 
+; environment := (or null environment), otherwise implementation dependent condition will be signaled.
+#?(macro-function 'dummy "not env") :signals condition
 
-; result := 
+; result := (or null function)
 
 ;;;; Affected By:
+; none
 
 ;;;; Side-Effects:
+; none
 
 ;;;; Notes:
 
