@@ -195,7 +195,7 @@
                          :lexical)
                      t
                      (environment-declare e))))
-          (when (find var-name (environment-symbol-macro e))
+          (when (assoc var-name (environment-symbol-macro e))
             (return (values :symbol-macro t (environment-declare e))))))))
 
 ;;; FUNCTION-INFORMATION.
