@@ -121,7 +121,10 @@
         parse-macro)
  (ftype (function (lambda-expression &optional (or null environment))
          (values function &optional))
-        enclose))
+        enclose)
+ (ftype (function (symbol &optional (or null environment))
+         (values (or null function) &optional))
+        macro-function))
 
 ;;;; IMPLEMENTATIONS
 ;;;; CONSTRUCTOR.
