@@ -135,7 +135,7 @@
 #?(nth-value 2 (variable-information 'var
 				     (augment-environment nil :variable '(var)
 							  :declare '((type fixnum var)))))
-=> ((TYPE FIXNUM VAR))
+=> ((TYPE . FIXNUM))
 ,:test equal
 
 ;;;; Affected By:
