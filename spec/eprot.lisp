@@ -4,6 +4,77 @@
 (in-package :eprot.spec)
 (setup :eprot)
 
+(requirements-about AUGMENT-ENVIRONMENT :doc-type function)
+
+;;;; Description:
+
+#+syntax (AUGMENT-ENVIRONMENT ENV
+           &KEY
+           VARIABLE
+           SYMBOL-MACRO
+           FUNCTION
+           MACRO
+           DECLARE)
+; => result
+
+;;;; Arguments and Values:
+
+; env := (or null environment), otherwise implementation dependent condition.
+#?(augment-environment :not-env) :signals condition
+
+; variable := list, otherwise implementation dependent condition.
+#?(augment-environment nil :variable :not-list) :signals condition
+; Each element must be a symbol, otherwise an error is signaled.
+#?(augment-environment nil :variable '("not symbol")) :signals error
+
+; symbol-macro := list, otherwise implementation dependent condition.
+#?(augment-environment nil :variable :not-list) :signals condition
+; Each element must be (symbol expression), otherwise an error is signaled.
+#?(augment-environment nil :symbol-macro '("not cons")) :signals error
+#?(augment-environment nil :symbol-macro '((less) (elt))) :signals error
+#?(augment-environment nil :symbol-macro '((too much elt))) :signals error
+#?(augment-environment nil :symbol-macro '(("not symbol" :dummy))) :signals error
+#?(augment-environment nil :symbol-macro '((fine :definition)))
+:be-the environment
+
+; function := list, otherwise implementation dependent condition.
+#?(augment-environment nil :variable :not-list) :signals condition
+; Each element must be a symbol, otherwise an error is signaled.
+#?(augment-environment nil :function '("not symbol")) :signals error
+
+; macro := list, otherwise implementation dependent condition.
+#?(augment-environment nil :macro :not-list) :signals condition
+; Each element must be a (symbol function), otherwise an error is signaled.
+#?(augment-environment nil :macro '("not cons")) :signals error
+#?(augment-environment nil :macro '((lee) (elt))) :signals error
+#?(augment-environment nil :macro '((too much elt))) :signals error
+#?(augment-environment nil :macro '((too much elt))) :signals error
+#?(augment-environment nil :macro '(("not symbol" :dummy))) :signals error
+#?(augment-environment nil :macro '((fine "but not function"))) :signals error
+#?(augment-environment nil :macro `((fine ,#'car)))
+:be-the environment
+
+; declare := list, otherwise implementation dependent condition.
+#?(augment-environment nil :declare :not-list) :signals condition
+; Each element must be a (symbol ...), otherwise an error is signaled.
+#?(augment-environment nil :declare '("not cons")) :signals condition
+#?(augment-environment nil :declare '(("not symbol"))) :signals condition
+#?(augment-environment nil :declare '((fine)))
+:be-the environment
+
+; result := environment
+#?(augment-environment nil) :be-the environment
+
+;;;; Affected By:
+; none.
+
+;;;; Side-Effects:
+; none.
+
+;;;; Notes:
+
+;;;; Exceptional-Situations:
+
 (requirements-about MACRO-FUNCTION :doc-type function)
 
 ;;;; Description:
@@ -82,43 +153,6 @@
 ;;;; Affected By:
 
 ;;;; Notes:
-
-(requirements-about AUGMENT-ENVIRONMENT :doc-type function)
-
-;;;; Description:
-
-#+syntax (AUGMENT-ENVIRONMENT ENV
-           &KEY
-           VARIABLE
-           SYMBOL-MACRO
-           FUNCTION
-           MACRO
-           DECLARE)
-; => result
-
-;;;; Arguments and Values:
-
-; env := (or null environment)
-
-; variable := list
-
-; symbol-macro := list
-
-; function := list
-
-; macro := list
-
-; declare := list
-
-; result := environment
-
-;;;; Affected By:
-
-;;;; Side-Effects:
-
-;;;; Notes:
-
-;;;; Exceptional-Situations:
 
 (requirements-about VARIABLE-INFORMATION :doc-type function)
 
