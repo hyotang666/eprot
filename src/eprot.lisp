@@ -2,7 +2,7 @@
 
 (defpackage :eprot
   (:use :cl)
-  (:shadow macro-function macroexpand-1)
+  (:shadow macro-function macroexpand-1 macroexpand)
   (:export))
 
 (in-package :eprot)
@@ -11,7 +11,6 @@
 #|
 * defmacro
 * *macroexpand-hook*
-* macroexpand
 * define-declaration
 * flet
 * labels
@@ -263,3 +262,12 @@
             (if expander
                 (values (funcall expander form environment) t)
                 (values form nil))))))
+
+;;;; MACROEXPAND
+
+(defun macroexpand (form &optional environment)
+  (multiple-value-bind (form expanded?)
+      (macroexpand-1 form environment)
+    (if expanded?
+        (macroexpand form environment)
+        form)))

@@ -2,7 +2,7 @@
 (in-package :asdf)
 (defsystem "eprot"
   :version
-  "0.3.0"
+  "0.4.0"
   :depends-on
   (
    "policy-cond"        ; Control flow macro that interprets declaration information.
