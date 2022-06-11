@@ -75,6 +75,71 @@
 
 ;;;; Exceptional-Situations:
 
+(requirements-about VARIABLE-INFORMATION :doc-type function)
+
+;;;; Description:
+
+#+syntax (VARIABLE-INFORMATION VAR-NAME &OPTIONAL ENV) ; => result
+
+;;;; Arguments and Values:
+
+; var-name := symbol, otherwise implementation dependent condition will be signaled.
+#?(variable-information "not symbol") :signals condition
+
+; env := (or null environment), otherwise implementation dependent condition will be signaled.
+#?(variable-information 'symbol "not env") :signals condition
+
+; result 1 := (member :constant :symbol-macro :lexical :special nil)
+; When VAR-NAME names constant, :CONSTANT will be returned.
+#?(variable-information 'pi) => :constant
+; When VAR-NAME is keyword symbol, :CONSTANT will be returned.
+#?(variable-information :keyword) => :constant
+; When VAR-NAME is specified as symbol-macro, :SYMBOL-MACRO will be returned.
+#?(variable-information 'symbol-macro
+			(augment-environment nil :symbol-macro '((symbol-macro :def))))
+=> :SYMBOL-MACRO
+; When VAR-NAME is specified as variable lexically, :lexical will be returned.
+#?(variable-information 'lexical
+			(augment-environment nil :variable '(lexical)))
+=> :LEXICAL
+; When VAR-NAME is specified as special, :special will be returned.
+#?(variable-information 'var
+			(augment-environment nil :variable '(var)
+					     :declare '((special var))))
+=> :SPECIAL
+; Otherwise NIL is returned.
+#?(variable-information 'var) => NIL
+
+; result 2 := boolean
+; When VAR-NAME can be refered in the ENVIRONMENT, true will be returned.
+#?(nth-value 1 (variable-information 'var
+				     (augment-environment nil :variable '(var))))
+=> T
+; Otherwise NIL is returned.
+#?(nth-value 1 (variable-information 'var)) => NIL
+
+; result 3 := list
+; When VAR-NAME has declarations, such declarations are returned.
+#?(nth-value 2 (variable-information 'var)) => NIL
+#?(nth-value 2 (variable-information 'var
+				     (augment-environment nil :variable '(var))))
+=> NIL
+#?(nth-value 2 (variable-information 'var
+				     (augment-environment nil :variable '(var)
+							  :declare '((type fixnum var)))))
+=> ((TYPE FIXNUM VAR))
+,:test equal
+
+;;;; Affected By:
+; none
+
+;;;; Side-Effects:
+; none
+
+;;;; Notes:
+
+;;;; Exceptional-Situations:
+
 (requirements-about MACRO-FUNCTION :doc-type function)
 
 ;;;; Description:
@@ -153,32 +218,6 @@
 ;;;; Affected By:
 
 ;;;; Notes:
-
-(requirements-about VARIABLE-INFORMATION :doc-type function)
-
-;;;; Description:
-
-#+syntax (VARIABLE-INFORMATION VAR-NAME &OPTIONAL ENV) ; => result
-
-;;;; Arguments and Values:
-
-; var-name := symbol
-
-; env := (or null environment)
-
-; result 1 := (member :constant :symbol-macro :lexical :special nil)
-
-; result 2 := boolean
-
-; result 3 := list
-
-;;;; Affected By:
-
-;;;; Side-Effects:
-
-;;;; Notes:
-
-;;;; Exceptional-Situations:
 
 (requirements-about FUNCTION-INFORMATION :doc-type function)
 
