@@ -259,6 +259,32 @@
 
 ;;;; Exceptional-Situations:
 
+(requirements-about ENCLOSE :doc-type function)
+
+;;;; Description:
+
+#+syntax (ENCLOSE LAMBDA-EXPRESSION &OPTIONAL ENV) ; => result
+
+;;;; Arguments and Values:
+
+; lambda-expression := list, otherwise implementation dependent condition will be signaled.
+#?(enclose :not-list) :signals condition
+
+; env := (or null environment), otherwise implementation dependent condition will be signaled.
+#?(enclose '(lambda ()) "not env") :signals condition
+
+; result := function
+
+;;;; Affected By:
+; none
+
+;;;; Side-Effects:
+; none
+
+;;;; Notes:
+
+;;;; Exceptional-Situations:
+
 (requirements-about MACRO-FUNCTION :doc-type function)
 
 ;;;; Description:
@@ -337,28 +363,6 @@
 ;;;; Affected By:
 
 ;;;; Notes:
-
-(requirements-about ENCLOSE :doc-type function)
-
-;;;; Description:
-
-#+syntax (ENCLOSE LAMBDA-EXPRESSION &OPTIONAL ENV) ; => result
-
-;;;; Arguments and Values:
-
-; lambda-expression := list
-
-; env := (or null environment)
-
-; result := function
-
-;;;; Affected By:
-
-;;;; Side-Effects:
-
-;;;; Notes:
-
-;;;; Exceptional-Situations:
 
 (requirements-about *ENVIRONMENT* :doc-type variable)
 
