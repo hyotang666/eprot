@@ -220,6 +220,45 @@
 
 ;;;; Exceptional-Situations:
 
+(requirements-about PARSE-MACRO :doc-type function)
+
+;;;; Description:
+
+#+syntax (PARSE-MACRO NAME LAMBDA-LIST BODY &OPTIONAL ENV) ; => result
+
+#?(parse-macro 'name '(&whole w a &environment e) '(`(print ',a)))
+=> (lambda (w e)
+     (destructuring-bind (a) (cdr w)
+       (block name
+       `(print ',a))))
+,:test equal
+
+;;;; Arguments and Values:
+
+; name := symbol, otherwise implementation dependent condition will be signaled.
+#?(parse-macro "not symbol" () ()) :signals condition
+
+; lambda-list := list, otherwise implementation dependent condition will be signaled.
+#?(parse-macro 'dummy :not-list ()) :signals condition
+
+; body := list, otherwise implementation dependent condition will be signaled.
+#?(parse-macro 'dummy () :not-list) :signals condition
+
+; env := (or null environment), otherwise implementation dependent condition will be signaled.
+#?(parse-macro 'dummy () () "not env") :signals condition
+
+; result := list as lambda expression.
+
+;;;; Affected By:
+; none
+
+;;;; Side-Effects:
+; none
+
+;;;; Notes:
+
+;;;; Exceptional-Situations:
+
 (requirements-about MACRO-FUNCTION :doc-type function)
 
 ;;;; Description:
@@ -298,32 +337,6 @@
 ;;;; Affected By:
 
 ;;;; Notes:
-
-(requirements-about PARSE-MACRO :doc-type function)
-
-;;;; Description:
-
-#+syntax (PARSE-MACRO NAME LAMBDA-LIST BODY &OPTIONAL ENV) ; => result
-
-;;;; Arguments and Values:
-
-; name := symbol
-
-; lambda-list := list
-
-; body := list
-
-; env := (or null environment)
-
-; result := list
-
-;;;; Affected By:
-
-;;;; Side-Effects:
-
-;;;; Notes:
-
-;;;; Exceptional-Situations:
 
 (requirements-about ENCLOSE :doc-type function)
 
