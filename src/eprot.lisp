@@ -265,6 +265,8 @@
          (or (lambda-fiddle:environment-lambda-var lambda-list)
              (gensym "ENVIRONMENT"))))
     `(lambda (,?form ,?env)
+       ,@(unless (symbol-package ?env)
+	   `((declare (ignore ,?env))))
        (destructuring-bind
            ,(lambda-fiddle:remove-environment-part
               (lambda-fiddle:remove-whole-part lambda-list))
