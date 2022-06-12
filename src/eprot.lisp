@@ -12,7 +12,8 @@
            #:function-information
            #:declaration-information
            #:parse-macro
-           #:enclose)
+           #:enclose
+           #:define-declaration)
   (:export ; EPROT things.
            #:environment
            #:*environment*))
@@ -22,7 +23,6 @@
 ;;;; TODO
 #|
 * defmacro
-* define-declaration
 * flet
 * labels
 * let
@@ -48,6 +48,13 @@
 (define-condition simple-program-error (eprot-error program-error simple-condition)
   ())
 
+(define-condition unknown-declaration (eprot-error cell-error)
+  ()
+  (:report
+   (lambda (this out)
+     (format out "~S is unknown as declaration. ~:@_See ~S"
+             (cell-error-name this) 'define-declaration))))
+
 ;;;; ENVIRONMENT OBJECT
 
 (defstruct environment
@@ -55,7 +62,7 @@
   (symbol-macro nil :type list :read-only t)
   (function nil :type list :read-only t)
   (macro nil :type list :read-only t)
-  (declare nil :type tcr.parse-declarations-1.0:declaration-env :read-only t)
+  (declare nil :type list :read-only t)
   (next nil :type (or null environment) :read-only t))
 
 (defmethod print-object ((o environment) output)
@@ -68,6 +75,85 @@
   `(do ((,var ,<environment> (environment-next ,var)))
        ((null ,var) ,<return>)
     ,@body))
+
+;;;; DEFINE-DECLARATION
+
+(defvar *declaration-handlers* (make-hash-table))
+
+(defmacro define-declaration (decl-name lambda-list &body body)
+  `(progn
+    (setf (gethash ',decl-name *declaration-handlers*)
+            (lambda ,lambda-list ,@body))
+    ',decl-name))
+
+(defun pprint-define-declaration (out exp &rest noise)
+  (declare (ignore noise))
+  (funcall (formatter "~:<~W~^ ~1I~:_~W~^ ~:_~W~^ ~_~@{~W~^ ~_~}~:>") out exp))
+
+(set-pprint-dispatch '(cons (member define-declaration))
+                     'pprint-define-declaration)
+
+(define-declaration special (form env)
+  (declare (ignore env))
+  (values :variable (mapcar (lambda (var) (list var (car form) t)) (cdr form))))
+
+(define-declaration type (form env)
+  (declare (ignore env))
+  (values :variable
+          (mapcar (lambda (var) (list var (car form) (cadr form)))
+                  (cddr form))))
+
+(define-declaration ftype (form env)
+  (declare (ignore env))
+  (values :function
+          (mapcar (lambda (var) (list var (car form) (cadr form)))
+                  (cddr form))))
+
+(define-declaration inline (form env)
+  (declare (ignore env))
+  (values :function (mapcar (lambda (var) (list var (car form) t)) (cdr form))))
+
+(define-declaration notinline (form env)
+  (declare (ignore env))
+  (values :function (mapcar (lambda (var) (list var (car form) t)) (cdr form))))
+
+(define-declaration optimize (form env)
+  (declare (ignore env))
+  (values :declare
+          (cons (car form)
+                (mapcar
+                  (lambda (quality)
+                    (if (symbolp quality)
+                        (list quality 3)
+                        quality))
+                  (cdr form)))))
+
+(define-declaration declaration (form env)
+  (declare (ignore env))
+  (values :declare form))
+
+(define-declaration dynamic-extent (form env)
+  (declare (ignore env))
+  (values :bind form))
+
+(defun default-decl-handler (decl-form env)
+  (declare (ignore env))
+  (if (millet:type-specifier-p (car decl-form))
+      (values :variable
+              (mapcar (lambda (var) (list var 'type (car decl-form)))
+                      (cdr decl-form)))
+      (error 'unknown-declaration :name (car decl-form))))
+
+(defun declaration-handler (decl-name)
+  (gethash decl-name *declaration-handlers* 'default-decl-handler))
+
+;;;; DECL-SPEC
+
+(defstruct (decl-spec (:constructor make-decl-spec (type info)))
+  (type (error "TYPE is required.")
+        :type (member :variable :function :declare :bind)
+        :read-only t)
+  (info nil :type list :read-only t))
 
 ;;;; SPECIAL VARIABLE
 
@@ -188,28 +274,29 @@
                     :symbol-macro symbol-macro
                     :function function
                     :macro macro
-                    :declare (tcr.parse-declarations-1.0:parse-declarations
-                               `((declare ,@declare)))
+                    :declare (mapcar
+                               (lambda (decl-spec)
+                                 (multiple-value-call #'make-decl-spec
+                                   (funcall
+                                     (declaration-handler (car decl-spec))
+                                     decl-spec env)))
+                               declare)
                     :next env))
 
 ;;;; ACCESSOR.
 ;;; VARIABLE-INFORMATION.
 
-(defun related-declarations (var-name env)
+(defun related-declarations (name type env)
   (uiop:while-collecting (acc)
-    (tcr.parse-declarations-1.0::do-declspec (spec (environment-declare env))
-      (if (find var-name
-                (tcr.parse-declarations-1.0::declspec.affected-variables spec)
-                :test #'equal)
-          (case (tcr.parse-declarations-1.0::declspec.identifier spec)
-            ((type ftype)
-             (acc
-              (cons (tcr.parse-declarations-1.0::declspec.identifier spec)
-                    (tcr.parse-declarations-1.0::declspec.context spec))))
-            (otherwise
-             (acc
-              (cons (tcr.parse-declarations-1.0::declspec.identifier spec)
-                    t))))))))
+    (do-env (e env)
+      (dolist (spec (environment-declare e))
+        (let ((info
+               (and (eq type (decl-spec-type spec))
+                    (assoc name (decl-spec-info spec)
+                           ;; NAME may (SETF fun-name).
+                           :test #'equal))))
+          (when info
+            (acc (cons (second info) (third info)))))))))
 
 (defun variable-information (var-name &optional env)
   ;; CLTL2 recommends there error checks.
@@ -222,7 +309,7 @@
       (values :constant t nil)
       (do-env (e env #|FIXME|# (values nil nil nil))
         (when (find var-name (environment-variable e))
-          (let ((decls (related-declarations var-name e)))
+          (let ((decls (related-declarations var-name :variable e)))
             (return
              (values (if (assoc 'special decls)
                          :special
@@ -231,7 +318,9 @@
                      decls))))
         (when (assoc var-name (environment-symbol-macro e))
           (return
-           (values :symbol-macro t (related-declarations var-name e)))))))
+           (values :symbol-macro
+                   t
+                   (related-declarations var-name :variable e)))))))
 
 ;;; FUNCTION-INFORMATION.
 
@@ -244,9 +333,9 @@
      (error 'type-error :datum env :expected-type '(or null environment))))
   (do-env (e env #|FIXME|# (values nil nil nil))
     (when (find fun-name (environment-function e))
-      (return (values :function t (related-declarations `#',fun-name e))))
+      (return (values :function t (related-declarations fun-name :function e))))
     (when (assoc fun-name (environment-macro e))
-      (return (values :macro t (related-declarations `#',fun-name e))))))
+      (return (values :macro t (related-declarations fun-name :function e))))))
 
 ;;; DECLARATION-INFORMATION
 
@@ -257,17 +346,11 @@
    (check-type decl-name declaration-name)
    (unless (typep env '(or null environment))
      (error 'type-error :datum env :expected-type '(or null environment))))
-  (do-env (e env)
-    (tcr.parse-declarations-1.0::do-declspec (spec (environment-declare env))
-      (when (eq decl-name
-                (tcr.parse-declarations-1.0::declspec.identifier spec))
-        (case (tcr.parse-declarations-1.0::declspec.identifier spec)
-          ((dynamic-extent ftype ignore ignorable inline notinline special
-            type)
-           nil)
-          (otherwise
-           (return-from declaration-information
-             (tcr.parse-declarations-1.0::build-declspec spec))))))))
+  (uiop:while-collecting (acc)
+    (do-env (e env)
+      (dolist (spec (environment-declare e))
+        (if (eq decl-name (decl-spec-type spec))
+            (acc (decl-spec-info spec)))))))
 
 ;;;; PARSE-MACRO
 

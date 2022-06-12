@@ -59,7 +59,7 @@
 ; Each element must be a (symbol ...), otherwise an error is signaled.
 #?(augment-environment nil :declare '("not cons")) :signals condition
 #?(augment-environment nil :declare '(("not symbol"))) :signals condition
-#?(augment-environment nil :declare '((fine)))
+#?(augment-environment nil :declare '((type)))
 :be-the environment
 
 ; result := environment
