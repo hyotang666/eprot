@@ -302,7 +302,8 @@
     (do-env (e env)
       (dolist (spec (environment-declare e))
         (let ((info
-               (and (eq type (decl-spec-type spec))
+               (and (or (eq type (decl-spec-type spec))
+                        (eq :bind (decl-spec-type spec)))
                     (assoc name (decl-spec-info spec)
                            ;; NAME may (SETF fun-name).
                            :test #'equal))))

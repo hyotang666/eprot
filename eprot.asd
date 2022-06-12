@@ -2,7 +2,7 @@
 (in-package :asdf)
 (defsystem "eprot"
   :version
-  "0.9.1"
+  "0.9.2"
   :depends-on
   (
    "millet"             ; Wrapper about implementation dependent tiny utilities.
