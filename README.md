@@ -25,13 +25,13 @@ MIT
 SBCL
 
 ### Tested with
-SBCL/2.2.5
-CCL/1.12.1
-CLISP/2.49
-ECL/21.2.1
-CMUCL/21D
-Allegro/10.1
-ABCL/1.9.0
+* SBCL/2.2.5
+* CCL/1.12.1
+* CLISP/2.49
+* ECL/21.2.1
+* CMUCL/21D
+* Allegro/10.1
+* ABCL/1.9.0
 
 ## Installation
 
