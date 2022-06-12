@@ -48,12 +48,9 @@
 (define-condition simple-program-error (eprot-error program-error simple-condition)
   ())
 
-(define-condition unknown-declaration (eprot-error cell-error)
-  ()
-  (:report
-   (lambda (this out)
-     (format out "~S is unknown as declaration. ~:@_See ~S"
-             (cell-error-name this) 'define-declaration))))
+(defun did-you-mean (out name sellection)
+  (apply (formatter "Did you mean ~#[~;~S~;~S or ~S~:;~S, ~S, or ~S~] ?") out
+         (fuzzy-match:fuzzy-match (symbol-name name) sellection)))
 
 ;;;; ENVIRONMENT OBJECT
 
@@ -79,6 +76,10 @@
 ;;;; DEFINE-DECLARATION
 
 (defvar *declaration-handlers* (make-hash-table))
+
+(defun list-all-declarations ()
+  (loop :for decl-name :being :each :hash-key :of *declaration-handlers*
+        :collect decl-name))
 
 (defmacro define-declaration (decl-name lambda-list &body body)
   `(progn
@@ -135,6 +136,16 @@
 (define-declaration dynamic-extent (form env)
   (declare (ignore env))
   (values :bind form))
+
+(define-condition unknown-declaration (eprot-error cell-error)
+  ()
+  (:report
+   (lambda (this out)
+     (format out "~S is unknown as declaration. ~:@_" (cell-error-name this))
+     (did-you-mean out (cell-error-name this) (list-all-declarations))
+     (format out
+             " ~:@_Or just not defined yet. ~:@_To see how to define declaration, evaluate ~S."
+             `(describe 'define-declaration)))))
 
 (defun default-decl-handler (decl-form env)
   (declare (ignore env))
