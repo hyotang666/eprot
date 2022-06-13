@@ -158,6 +158,10 @@
 (defun declaration-handler (decl-name)
   (gethash decl-name *declaration-handlers* 'default-decl-handler))
 
+(defun parse-declaration-spec (decl-spec &optional env)
+  (multiple-value-call #'make-decl-spec
+    (funcall (declaration-handler (car decl-spec)) decl-spec env)))
+
 ;;;; DECL-SPEC
 
 (defstruct (decl-spec (:constructor make-decl-spec (type info)))
