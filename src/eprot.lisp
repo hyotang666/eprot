@@ -16,7 +16,13 @@
            #:define-declaration)
   (:export ; EPROT things.
            #:environment
-           #:*environment*))
+           #:*environment*
+           ;;;; DECL-SPEC
+           #:decl-spec ; object
+           #:parse-declaration-spec ; constructor
+           ;; reader
+           #:decl-spec-type
+           #:decl-spec-info))
 
 (in-package :eprot)
 
