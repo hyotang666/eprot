@@ -66,7 +66,10 @@
   (function nil :type list :read-only t)
   (macro nil :type list :read-only t)
   (declare nil :type list :read-only t)
-  (next nil :type (or null environment) :read-only t))
+  (next nil :type (or null environment) :read-only t)
+  (declaration-handlers (make-hash-table :test #'eq)
+                        :type hash-table
+                        :read-only t))
 
 (defmethod print-object ((o environment) output)
   (cond (*print-readably* (call-next-method))
@@ -79,17 +82,23 @@
        ((null ,var) ,<return>)
     ,@body))
 
+;;;; SPECIAL VARIABLE
+
+(defvar *environment* (make-environment))
+
+(declaim (environment *environment*))
+
 ;;;; DEFINE-DECLARATION
 
-(defvar *declaration-handlers* (make-hash-table))
-
-(defun list-all-declarations ()
-  (loop :for decl-name :being :each :hash-key :of *declaration-handlers*
+(defun list-all-declarations (&optional env)
+  (loop :for decl-name :being :each :hash-key :of
+             (environment-declaration-handlers env)
         :collect decl-name))
 
 (defmacro define-declaration (decl-name lambda-list &body body)
   `(progn
-    (setf (gethash ',decl-name *declaration-handlers*)
+    (setf (gethash ',decl-name
+                   (environment-declaration-handlers *environment*))
             (lambda ,lambda-list ,@body))
     ',decl-name))
 
@@ -154,19 +163,30 @@
              `(describe 'define-declaration)))))
 
 (defun default-decl-handler (decl-form env)
-  (declare (ignore env))
-  (if (millet:type-specifier-p (car decl-form))
-      (values :variable
-              (mapcar (lambda (var) (list var 'type (car decl-form)))
-                      (cdr decl-form)))
-      (error 'unknown-declaration :name (car decl-form))))
+  (cond
+    (;; Is declaration known one?
+     (nth-value 1
+                (gethash (car decl-form)
+                         (environment-declaration-handlers env)))
+     nil)
+    (;; Standard requires type-specifier is treated as type declaration.
+     (millet:type-specifier-p (car decl-form))
+     (values :variable
+             (mapcar (lambda (var) (list var 'type (car decl-form)))
+                     (cdr decl-form))))
+    (t (error 'unknown-declaration :name (car decl-form)))))
 
-(defun declaration-handler (decl-name)
-  (gethash decl-name *declaration-handlers* 'default-decl-handler))
+(defun declaration-handler (decl-name &optional env)
+  (if env
+      ;; in order to accept { decl-name : nil } as just known declaration by proclaim.
+      (or (gethash decl-name (environment-declaration-handlers env))
+          'default-decl-handler)
+      'default-decl-handler))
 
 (defun parse-declaration-spec (decl-spec &optional env)
-  (multiple-value-call #'make-decl-spec
-    (funcall (declaration-handler (car decl-spec)) decl-spec env)))
+  (let ((handler (declaration-handler (car decl-spec) env)))
+    (when handler
+      (multiple-value-call #'make-decl-spec (funcall handler decl-spec env)))))
 
 ;;;; DECL-SPEC
 
@@ -175,12 +195,6 @@
         :type (member :variable :function :declare :bind)
         :read-only t)
   (info nil :type list :read-only t))
-
-;;;; SPECIAL VARIABLE
-
-(defvar *environment*)
-
-(declaim (environment *environment*))
 
 ;;;; TYPES
 
@@ -295,13 +309,11 @@
                     :symbol-macro symbol-macro
                     :function function
                     :macro macro
-                    :declare (mapcar
-                               (lambda (decl-spec)
-                                 (multiple-value-call #'make-decl-spec
-                                   (funcall
-                                     (declaration-handler (car decl-spec))
-                                     decl-spec env)))
-                               declare)
+                    :declare (loop :for spec :in declare
+                                   :for decl-spec
+                                        = (parse-declaration-spec spec)
+                                   :when decl-spec
+                                     :collect :it)
                     :next env))
 
 ;;;; ACCESSOR.
