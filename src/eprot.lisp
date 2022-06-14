@@ -215,9 +215,15 @@
   `(setf *environment* (find-environment ',env-name)))
 
 (defmacro defenv
-          (env-name &key variable symbol-macro function macro declare handler)
+          (env-name
+           &key variable symbol-macro function macro declare handler
+           (use :standard))
   (check-type env-name symbol)
-  `(let ((*environment* (copy-env nil)))
+  `(let ((*environment*
+          ,(case use
+             ((nil) `(make-environment))
+             (:standard `(copy-env nil))
+             (otherwise `(copy-env (find-env ',use))))))
      ,@(mapcar (lambda (definition) `(define-declaration ,@definition))
                handler)
      (store-environment ',env-name
