@@ -127,6 +127,12 @@
                                             :name ',env-name))
     ',env-name))
 
+(defun pprint-defenv (out exp &rest noise)
+  (declare (ignore noise))
+  (funcall (formatter "~:<~W~^ ~1I~:_~W~^ ~_~@{~W~^ ~:_~W~^ ~_~}~:>") out exp))
+
+(set-pprint-dispatch '(cons (member defenv)) 'pprint-defenv)
+
 (store-environment :standard (make-environment :name :standard))
 
 (in-environment :standard)
