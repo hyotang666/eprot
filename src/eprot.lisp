@@ -362,7 +362,7 @@
                     :macro macro
                     :declare (loop :for spec :in declare
                                    :for decl-spec
-                                        = (parse-declaration-spec spec)
+                                        = (parse-declaration-spec spec env)
                                    :when decl-spec
                                      :collect :it)
                     :name name
