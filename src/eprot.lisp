@@ -234,7 +234,8 @@
       'default-decl-handler))
 
 (defun parse-declaration-spec (decl-spec &optional env)
-  (let ((handler (declaration-handler (car decl-spec) env)))
+  (let* ((env (or env *environment*))
+         (handler (declaration-handler (car decl-spec) env)))
     (when handler
       (multiple-value-call #'make-decl-spec (funcall handler decl-spec env)))))
 
