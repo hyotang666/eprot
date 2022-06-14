@@ -17,6 +17,10 @@
            #:enclose
            #:define-declaration)
   (:export ; EPROT things.
+           ;;;; CONDITION
+           #:eprot-error
+           #:unknown-declaration
+           ;;;; ENVIRONMENT
            #:environment
            #:*environment*
            #:find-environment
