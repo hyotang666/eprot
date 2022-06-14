@@ -81,9 +81,7 @@
   (macro nil :type list :read-only t)
   (declare nil :type list)
   (next nil :type (or null environment) :read-only t)
-  (declaration-handlers (make-hash-table :test #'eq)
-                        :type hash-table
-                        :read-only t))
+  (declaration-handlers nil :type (or null hash-table) :read-only t))
 
 (defmethod print-object ((o environment) output)
   (cond (*print-readably* (call-next-method))
@@ -207,7 +205,8 @@
   (check-type env-name symbol)
   `(let ((*environment*
           ,(case use
-             ((nil) `(make-environment))
+             ((nil)
+              `(make-environment :declaration-handlers (make-hash-table :test #'eq)))
              (:standard `(copy-env nil))
              (otherwise `(copy-env (find-environment ',use))))))
      ,@(mapcar (lambda (definition) `(define-declaration ,@definition))
@@ -228,7 +227,9 @@
 
 (set-pprint-dispatch '(cons (member defenv)) 'pprint-defenv)
 
-(store-environment :standard (make-environment :name :standard))
+(store-environment :standard (make-environment :name :standard
+                                               :declaration-handlers (make-hash-table
+                                                                       :test #'eq)))
 
 (in-environment :standard)
 
@@ -243,15 +244,19 @@
                       :macro macro
                       :declare (copy-list declare)
                       :next next
-                      :declaration-handlers (alexandria:copy-hash-table
-                                              declaration-handlers))))
+                      :declaration-handlers (and declaration-handlers
+                                                 (alexandria:copy-hash-table
+                                                   declaration-handlers)))))
 
 ;;;; DEFINE-DECLARATION
 
-(defun list-all-declarations (&optional env)
-  (loop :for decl-name :being :each :hash-key :of
-             (environment-declaration-handlers env)
-        :collect decl-name))
+(defun list-all-declarations (&optional (env *environment*))
+  (uiop:while-collecting (acc)
+    (do-env (e env)
+      (when (environment-declaration-handlers e)
+        (loop :for decl-name :being :each :hash-key :of
+                   (environment-declaration-handlers e)
+              :do (acc decl-name))))))
 
 (defmacro define-declaration (decl-name lambda-list &body body)
   `(progn
