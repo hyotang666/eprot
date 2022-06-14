@@ -118,35 +118,50 @@
 
 (deftype lambda-expression () 'list)
 
+(deftype env-name () 'symbol)
+
 ;;;; FTYPES
 
-(declaim
- (ftype (function (var-name &optional (or null environment))
-         (values (or null variable-type) lexicalp declaration-alist &optional))
-        variable-information)
- (ftype (function (function-name &optional (or null environment))
-         (values (or null function-type) lexicalp declaration-alist &optional))
-        function-information)
- (ftype (function (declaration-name &optional (or null environment))
-         (values t &optional))
-        declaration-information)
- (ftype (function
-         ((or null environment) &key (:variable list) (:symbol-macro list)
-          (:function list) (:macro list) (:declare list) (:name t))
-         (values environment &optional))
-        augment-environment)
- (ftype (function (macro-name lambda-list body &optional (or null environment))
-         (values lambda-expression &optional))
-        parse-macro)
- (ftype (function (lambda-expression &optional (or null environment))
-         (values function &optional))
-        enclose)
- (ftype (function (symbol &optional (or null environment))
-         (values (or null function) &optional))
-        macro-function)
- (ftype (function (t &optional (or null environment))
-         (values t boolean &optional))
-        macroexpand-1))
+(declaim ;; Named environment features.
+         (ftype (function (env-name &optional boolean)
+                 (values (or null environment) &optional))
+                find-environment)
+         ;; CLtL2 features.
+         (ftype (function (var-name &optional (or null environment))
+                 (values (or null variable-type)
+                         lexicalp
+                         declaration-alist
+                         &optional))
+                variable-information)
+         (ftype (function (function-name &optional (or null environment))
+                 (values (or null function-type)
+                         lexicalp
+                         declaration-alist
+                         &optional))
+                function-information)
+         (ftype (function (declaration-name &optional (or null environment))
+                 (values t &optional))
+                declaration-information)
+         (ftype (function
+                 ((or null environment) &key (:variable list)
+                  (:symbol-macro list) (:function list) (:macro list)
+                  (:declare list) (:name t))
+                 (values environment &optional))
+                augment-environment)
+         (ftype (function
+                 (macro-name lambda-list body &optional (or null environment))
+                 (values lambda-expression &optional))
+                parse-macro)
+         (ftype (function (lambda-expression &optional (or null environment))
+                 (values function &optional))
+                enclose)
+         ;; CL Features.
+         (ftype (function (symbol &optional (or null environment))
+                 (values (or null function) &optional))
+                macro-function)
+         (ftype (function (t &optional (or null environment))
+                 (values t boolean &optional))
+                macroexpand-1))
 
 ;;;; ITERATOR
 
