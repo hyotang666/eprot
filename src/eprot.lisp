@@ -206,7 +206,8 @@
   `(let ((*environment*
           ,(case use
              ((nil)
-              `(make-environment :declaration-handlers (make-hash-table :test #'eq)))
+              `(make-environment :declaration-handlers (make-hash-table :test #'eq)
+                                 :name :null))
              (:standard `(copy-env nil))
              (otherwise `(copy-env (find-environment ',use))))))
      ,@(mapcar (lambda (definition) `(define-declaration ,@definition))
@@ -446,7 +447,7 @@
             (acc (cons (second info) (third info)))))))))
 
 (defun toplevel-environment-p (environment)
-  (member (environment-name (environment-next environment)) '(:standard nil)))
+  (member (environment-name (environment-next environment)) '(:standard :null)))
 
 (defun variable-information (var-name &optional env)
   ;; CLTL2 recommends there error checks.
