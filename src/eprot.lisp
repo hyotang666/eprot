@@ -19,6 +19,9 @@
   (:export ; EPROT things.
            #:environment
            #:*environment*
+           #:find-environment
+           #:defenv
+           #:in-environment
            ;;;; DECL-SPEC
            #:decl-spec ; object
            #:parse-declaration-spec ; constructor
@@ -62,6 +65,7 @@
 ;;;; ENVIRONMENT OBJECT
 
 (defstruct environment
+  (name nil :read-only t)
   (variable nil :type list :read-only t)
   (symbol-macro nil :type list :read-only t)
   (function nil :type list :read-only t)
@@ -74,7 +78,9 @@
 
 (defmethod print-object ((o environment) output)
   (cond (*print-readably* (call-next-method))
-        (t (print-unreadable-object (o output :type t :identity t)))))
+        (t
+         (print-unreadable-object (o output :type t :identity t)
+           (write (environment-name o) :stream output)))))
 
 ;;;; ITERATOR
 
@@ -85,9 +91,45 @@
 
 ;;;; SPECIAL VARIABLE
 
-(defvar *environment* (make-environment))
+(defvar *environments* (make-hash-table :test #'eq))
+
+(define-condition missing-environment (eprot-error cell-error)
+  ()
+  (:report
+   (lambda (this out)
+     (format out "Missing environment ~S." (cell-error-name this)))))
+
+(defun find-environment (env-name &optional (errorp t))
+  (or (gethash env-name *environments*)
+      (and errorp (error 'missing-environment :name env-name))))
+
+(defun store-environment (env-name environment)
+  (setf (gethash env-name *environments*) environment))
+
+(defvar *environment*)
 
 (declaim (environment *environment*))
+
+(defmacro in-environment (env-name)
+  (check-type env-name symbol)
+  `(setf *environment* (find-environment ',env-name)))
+
+(defmacro defenv (env-name &key variable symbol-macro function macro declare)
+  (check-type env-name symbol)
+  `(progn
+    (store-environment ',env-name
+                       (augment-environment (find-environment :standard)
+                                            :variable ,variable
+                                            :symbol-macro ,symbol-macro
+                                            :function ,function
+                                            :macro ,macro
+                                            :declare ,declare
+                                            :name ',env-name))
+    ',env-name))
+
+(store-environment :standard (make-environment :name :standard))
+
+(in-environment :standard)
 
 ;;;; DEFINE-DECLARATION
 
@@ -243,7 +285,7 @@
         declaration-information)
  (ftype (function
          ((or null environment) &key (:variable list) (:symbol-macro list)
-          (:function list) (:macro list) (:declare list))
+          (:function list) (:macro list) (:declare list) (:name t))
          (values environment &optional))
         augment-environment)
  (ftype (function (macro-name lambda-list body &optional (or null environment))
@@ -264,7 +306,7 @@
 ;;; AUGMENT-ENVIRONMENT.
 
 (defun augment-environment
-       (env &key variable symbol-macro function macro declare)
+       (env &key variable symbol-macro function macro declare name)
   ;; Trivial type checks.
   #.(let ((assertions
            '((assert (every (lambda (elt) (typep elt 'var-name)) variable) ())
@@ -323,6 +365,7 @@
                                         = (parse-declaration-spec spec)
                                    :when decl-spec
                                      :collect :it)
+                    :name name
                     :next env))
 
 ;;;; ACCESSOR.
