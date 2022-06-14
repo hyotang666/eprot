@@ -91,20 +91,6 @@
          (print-unreadable-object (o output :type t :identity t)
            (write (environment-name o) :stream output)))))
 
-(defun copy-env (&optional (env *environment*))
-  (with-slots (name variable symbol-macro function macro declare next
-               declaration-handlers)
-      (or env (find-environment :standard))
-    (make-environment :name name
-                      :variable variable
-                      :symbol-macro symbol-macro
-                      :function function
-                      :macro macro
-                      :declare (copy-list declare)
-                      :next next
-                      :declaration-handlers (alexandria:copy-hash-table
-                                              declaration-handlers))))
-
 ;;;; DECL-SPEC
 
 (defstruct (decl-spec (:constructor make-decl-spec (type info)))
@@ -245,6 +231,20 @@
 (store-environment :standard (make-environment :name :standard))
 
 (in-environment :standard)
+
+(defun copy-env (&optional (env *environment*))
+  (with-slots (name variable symbol-macro function macro declare next
+               declaration-handlers)
+      (or env (find-environment :standard))
+    (make-environment :name name
+                      :variable variable
+                      :symbol-macro symbol-macro
+                      :function function
+                      :macro macro
+                      :declare (copy-list declare)
+                      :next next
+                      :declaration-handlers (alexandria:copy-hash-table
+                                              declaration-handlers))))
 
 ;;;; DEFINE-DECLARATION
 
