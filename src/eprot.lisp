@@ -91,6 +91,20 @@
          (print-unreadable-object (o output :type t :identity t)
            (write (environment-name o) :stream output)))))
 
+(defun copy-env (&optional (env *environment*))
+  (with-slots (name variable symbol-macro function macro declare next
+               declaration-handlers)
+      (or env (find-environment :standard))
+    (make-environment :name name
+                      :variable variable
+                      :symbol-macro symbol-macro
+                      :function function
+                      :macro macro
+                      :declare (copy-list declare)
+                      :next next
+                      :declaration-handlers (alexandria:copy-hash-table
+                                              declaration-handlers))))
+
 ;;;; DECL-SPEC
 
 (defstruct (decl-spec (:constructor make-decl-spec (type info)))
@@ -200,18 +214,21 @@
   (check-type env-name symbol)
   `(setf *environment* (find-environment ',env-name)))
 
-(defmacro defenv (env-name &key variable symbol-macro function macro declare)
+(defmacro defenv
+          (env-name &key variable symbol-macro function macro declare handler)
   (check-type env-name symbol)
-  `(progn
-    (store-environment ',env-name
-                       (augment-environment (find-environment :standard)
-                                            :variable ,variable
-                                            :symbol-macro ,symbol-macro
-                                            :function ,function
-                                            :macro ,macro
-                                            :declare ,declare
-                                            :name ',env-name))
-    ',env-name))
+  `(let ((*environment* (copy-env nil)))
+     ,@(mapcar (lambda (definition) `(define-declaration ,@definition))
+               handler)
+     (store-environment ',env-name
+                        (augment-environment *environment*
+                                             :variable ,variable
+                                             :symbol-macro ,symbol-macro
+                                             :function ,function
+                                             :macro ,macro
+                                             :declare ,declare
+                                             :name ',env-name))
+     ',env-name))
 
 (defun pprint-defenv (out exp &rest noise)
   (declare (ignore noise))

@@ -2,9 +2,10 @@
 (in-package :asdf)
 (defsystem "eprot"
   :version
-  "0.17.0"
+  "0.18.0"
   :depends-on
   (
+   "alexandria"         ; Public domain utilities.
    "millet"             ; Wrapper about implementation dependent tiny utilities.
    "policy-cond"        ; Control flow macro that interprets declaration information.
    "lambda-fiddle"      ; Lambda list handling.
