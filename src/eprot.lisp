@@ -440,6 +440,9 @@
           (when info
             (acc (cons (second info) (third info)))))))))
 
+(defun toplevel-environment-p (environment)
+  (member (environment-name (environment-next environment)) '(:standard nil)))
+
 (defun variable-information (var-name &optional env)
   ;; CLTL2 recommends there error checks.
   #-sbcl
@@ -453,15 +456,15 @@
         (when (find var-name (environment-variable e))
           (let ((decls (related-declarations var-name :variable e)))
             (return
-             (values (if (assoc 'special decls)
-                         :special
-                         :lexical)
-                     t
+             (values (cond ((assoc 'special decls) :special)
+                           ((toplevel-environment-p e) nil)
+                           (t :lexical))
+                     (not (toplevel-environment-p e))
                      decls))))
         (when (assoc var-name (environment-symbol-macro e))
           (return
            (values :symbol-macro
-                   t
+                   (not (toplevel-environment-p e))
                    (related-declarations var-name :variable e)))))))
 
 ;;; FUNCTION-INFORMATION.
@@ -475,9 +478,15 @@
      (error 'type-error :datum env :expected-type '(or null environment))))
   (do-env (e env #|FIXME|# (values nil nil nil))
     (when (find fun-name (environment-function e))
-      (return (values :function t (related-declarations fun-name :function e))))
+      (return
+       (values :function
+               (not (toplevel-environment-p e))
+               (related-declarations fun-name :function e))))
     (when (assoc fun-name (environment-macro e))
-      (return (values :macro t (related-declarations fun-name :function e))))))
+      (return
+       (values :macro
+               (not (toplevel-environment-p e))
+               (related-declarations fun-name :function e))))))
 
 ;;; DECLARATION-INFORMATION
 
