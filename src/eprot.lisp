@@ -20,6 +20,7 @@
            ;;;; CONDITION
            #:eprot-error
            #:unknown-declaration
+           #:missing-environment
            ;;;; ENVIRONMENT
            #:environment
            #:*environment*
