@@ -4,6 +4,178 @@
 (in-package :eprot.spec)
 (setup :eprot)
 
+(requirements-about ENVIRONMENT :doc-type STRUCTURE)
+
+;;;; Description:
+;;;; Class Precedence List: (case in SBCL)
+; environment structure-object slot-object t
+
+;;;; Effective Slots:
+
+; NAME [Type] T
+
+; VARIABLE [Type] LIST
+
+; SYMBOL-MACRO [Type] LIST
+
+; FUNCTION [Type] LIST
+
+; MACRO [Type] LIST
+
+; DECLARE [Type] LIST
+
+; NEXT [Type] (OR NULL ENVIRONMENT)
+
+; DECLARATION-HANDLERS [Type] HASH-TABLE
+
+;;;; Notes:
+
+(requirements-about FIND-ENVIRONMENT :doc-type function)
+
+;;;; Description:
+
+#+syntax (FIND-ENVIRONMENT ENV-NAME &OPTIONAL (ERRORP T)) ; => result
+
+;;;; Arguments and Values:
+
+; env-name := symbol, otherwise implementation dependent condition is signaled.
+#?(find-environment "not symbol") :signals condition
+
+; errorp := boolean, specify signal an error when ENV-NAME is missing. (the default is T.)
+#?(find-environment :no-such) :signals missing-environment
+#?(find-environment :no-such nil) => NIL
+
+; result := (or null environment)
+#?(find-environment :standard) :be-the environment
+
+;;;; Affected By:
+; eprot::*environments*
+
+;;;; Side-Effects:
+; none
+
+;;;; Notes:
+
+;;;; Exceptional-Situations:
+
+(requirements-about *ENVIRONMENT* :doc-type variable)
+
+;;;; Description:
+
+;;;; Value type is ENVIRONMENT
+#? *ENVIRONMENT* :be-the environment
+
+; Initial value is :standard environment.
+#?*environment* :equivalents (find-environment :standard)
+
+;;;; Affected By:
+; in-environment
+
+;;;; Notes:
+
+(requirements-about IN-ENVIRONMENT :doc-type function)
+
+;;;; Description:
+
+#+syntax (IN-ENVIRONMENT ENV-NAME) ; => result
+
+;;;; Arguments and Values:
+
+; env-name := symbol, otherwise implementation dependent condition is signaled.
+#?(in-environment "not symbol") :signals condition
+
+; result := ENVIRONMENT
+#?(in-environment :standard) :be-the environment
+
+;;;; Affected By:
+; eprot::*environments*
+
+;;;; Side-Effects:
+; Modify *environment*.
+
+;;;; Notes:
+
+;;;; Exceptional-Situations:
+; When specified environment are not found, an error is signaled.
+#?(in-environment :no-such) :signals missing-environment
+
+(requirements-about DEFENV :doc-type function)
+
+;;;; Description:
+
+#+syntax (DEFENV ENV-NAME &KEY VARIABLE SYMBOL-MACRO FUNCTION MACRO DECLARE)
+; => result
+
+;;;; Arguments and Values:
+
+; env-name := symbol, otherwise implementation dependent condition is signaled.
+#?(defenv "not symbol") :signals condition
+
+; variable := The form which generates list of symbols.
+
+; symbol-macro := The form which genarates list of (symbol t).
+
+; function := The form which generates list of symbols.
+
+; macro := the form which generates list of (symbol function).
+
+; declare := the form which generates list of (decl-name spec*).
+
+; result := ENV-NAME
+
+;;;; Affected By:
+; eprot::*environments*
+
+;;;; Side-Effects:
+; Modify eprot::*environments*
+
+;;;; Notes:
+
+;;;; Exceptional-Situations:
+
+(requirements-about DECL-SPEC :doc-type STRUCTURE)
+
+;;;; Description:
+;;;; Class Precedence List: (case in SBCL)
+; decl-spec structure-object slot-object t
+
+;;;; Effective Slots:
+
+; TYPE [Type] (MEMBER :VARIABLE :FUNCTION :DECLARE :BIND)
+
+; INFO [Type] LIST
+
+;;;; Notes:
+
+(requirements-about PARSE-DECLARATION-SPEC :doc-type function)
+
+;;;; Description:
+
+#+syntax (PARSE-DECLARATION-SPEC DECL-SPEC &OPTIONAL ENV) ; => result
+
+;;;; Arguments and Values:
+
+; decl-spec := (decl-name &rest spec), otherwise an error is signaled.
+#?(parse-declaration-spec :not-list) :signals error
+
+; env := (or null environment), otherwise an error is signaled.
+#?(parse-declaration-spec () "not env") :signals error
+
+; result := decl-spec.
+#?(parse-declaration-spec '(type fixnum a)) :be-the decl-spec
+
+;;;; Affected By:
+; *environment*
+
+;;;; Side-Effects:
+; ENV may destructively modified depending on declaration handler.
+
+;;;; Notes:
+
+;;;; Exceptional-Situations:
+; When decl-name is not known in ENV, an error is signaled.
+#?(parse-declaration-spec '(unknown spec)) :signals unknown-declaration
+
 (requirements-about AUGMENT-ENVIRONMENT :doc-type function)
 
 ;;;; Description:
@@ -404,17 +576,4 @@
 ;;;; Notes:
 
 ;;;; Exceptional-Situations:
-
-(requirements-about *ENVIRONMENT* :doc-type variable)
-
-;;;; Description:
-
-;;;; Value type is ENVIRONMENT
-;#? *ENVIRONMENT* :be-the ???
-
-; Initial value is `:UNBOUND`
-
-;;;; Affected By:
-
-;;;; Notes:
 
