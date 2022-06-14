@@ -362,17 +362,18 @@
   (unless (typep env '(or null environment))
     (error 'type-error :datum env :expected-type '(or null environment)))
   ;; The body.
-  (make-environment :variable variable
-                    :symbol-macro symbol-macro
-                    :function function
-                    :macro macro
-                    :declare (loop :for spec :in declare
-                                   :for decl-spec
-                                        = (parse-declaration-spec spec env)
-                                   :when decl-spec
-                                     :collect :it)
-                    :name name
-                    :next env))
+  (let ((env (or env *environment*)))
+    (make-environment :variable variable
+                      :symbol-macro symbol-macro
+                      :function function
+                      :macro macro
+                      :declare (loop :for spec :in declare
+                                     :for decl-spec
+                                          = (parse-declaration-spec spec env)
+                                     :when decl-spec
+                                       :collect :it)
+                      :name name
+                      :next env)))
 
 ;;;; ACCESSOR.
 ;;; VARIABLE-INFORMATION.
