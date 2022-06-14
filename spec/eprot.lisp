@@ -1,6 +1,6 @@
 (defpackage :eprot.spec
   (:use :cl :jingoh :eprot)
-  (:shadowing-import-from :eprot macro-function macroexpand-1 macroexpand *macroexpand-hook*))
+  (:shadowing-import-from :eprot macro-function macroexpand-1 macroexpand *macroexpand-hook* proclaim))
 (in-package :eprot.spec)
 (setup :eprot)
 
