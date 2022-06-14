@@ -209,7 +209,7 @@
           ,(case use
              ((nil) `(make-environment))
              (:standard `(copy-env nil))
-             (otherwise `(copy-env (find-env ',use))))))
+             (otherwise `(copy-env (find-environment ',use))))))
      ,@(mapcar (lambda (definition) `(define-declaration ,@definition))
                handler)
      (store-environment ',env-name
