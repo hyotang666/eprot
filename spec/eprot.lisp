@@ -1,6 +1,6 @@
 (defpackage :eprot.spec
   (:use :cl :jingoh :eprot)
-  (:shadowing-import-from :eprot macro-function macroexpand-1 macroexpand *macroexpand-hook* proclaim))
+  (:shadowing-import-from :eprot macro-function macroexpand-1 macroexpand *macroexpand-hook* proclaim list-all-declarations))
 (in-package :eprot.spec)
 (setup :eprot)
 
@@ -605,6 +605,33 @@
 ;;;; Affected By:
 
 ;;;; Side-Effects:
+
+;;;; Notes:
+
+;;;; Exceptional-Situations:
+
+(requirements-about LIST-ALL-DECLARATIONS :doc-type function)
+
+;;;; Description:
+
+#+syntax (LIST-ALL-DECLARATIONS &OPTIONAL (ENV *ENVIRONMENT*)) ; => result
+
+;;;; Arguments and Values:
+
+; env := environment, otherwise an error is signaled.
+#?(list-all-declarations "not env") :signals error
+
+; result := The list of the decl-names.
+#?(list-all-declarations (find-environment :standard))
+:satisfies
+(lambda (list)
+  (& (null (set-difference list '(special type ftype inline notinline optimize declaration dynamic-extent)))))
+
+;;;; Affected By:
+; *environment* when optional arg is not specified.
+
+;;;; Side-Effects:
+; none
 
 ;;;; Notes:
 
