@@ -87,7 +87,7 @@
   (cond (*print-readably* (call-next-method))
         (t
          (print-unreadable-object (o output :type t :identity t)
-           (write (environment-name o) :stream output)))))
+           (write (or (environment-name o) "Anonymous") :stream output)))))
 
 ;;;; DECL-SPEC
 
