@@ -82,6 +82,68 @@
          (print-unreadable-object (o output :type t :identity t)
            (write (environment-name o) :stream output)))))
 
+;;;; DECL-SPEC
+
+(defstruct (decl-spec (:constructor make-decl-spec (type info)))
+  (type (error "TYPE is required.")
+        :type (member :variable :function :declare :bind)
+        :read-only t)
+  (info nil :type list :read-only t))
+
+;;;; TYPES
+
+(deftype var-name () 'symbol)
+
+(deftype variable-type () '(member :special :lexical :symbol-macro :constant))
+
+(deftype declaration-alist () 'list)
+
+(deftype function-name () 'symbol)
+
+(deftype function-type () '(member :function :macro :special-form))
+
+(deftype lexicalp () 'boolean)
+
+(deftype declaration-name () 'symbol)
+
+(deftype macro-name () 'symbol)
+
+(deftype lambda-list () 'list)
+
+(deftype body () 'list)
+
+(deftype lambda-expression () 'list)
+
+;;;; FTYPES
+
+(declaim
+ (ftype (function (var-name &optional (or null environment))
+         (values (or null variable-type) lexicalp declaration-alist &optional))
+        variable-information)
+ (ftype (function (function-name &optional (or null environment))
+         (values (or null function-type) lexicalp declaration-alist &optional))
+        function-information)
+ (ftype (function (declaration-name &optional (or null environment))
+         (values t &optional))
+        declaration-information)
+ (ftype (function
+         ((or null environment) &key (:variable list) (:symbol-macro list)
+          (:function list) (:macro list) (:declare list) (:name t))
+         (values environment &optional))
+        augment-environment)
+ (ftype (function (macro-name lambda-list body &optional (or null environment))
+         (values lambda-expression &optional))
+        parse-macro)
+ (ftype (function (lambda-expression &optional (or null environment))
+         (values function &optional))
+        enclose)
+ (ftype (function (symbol &optional (or null environment))
+         (values (or null function) &optional))
+        macro-function)
+ (ftype (function (t &optional (or null environment))
+         (values t boolean &optional))
+        macroexpand-1))
+
 ;;;; ITERATOR
 
 (defmacro do-env ((var <environment> &optional <return>) &body body)
@@ -245,68 +307,6 @@
   (let ((spec (parse-declaration-spec decl-spec *environment*)))
     (when spec
       (push spec (environment-declare *environment*)))))
-
-;;;; DECL-SPEC
-
-(defstruct (decl-spec (:constructor make-decl-spec (type info)))
-  (type (error "TYPE is required.")
-        :type (member :variable :function :declare :bind)
-        :read-only t)
-  (info nil :type list :read-only t))
-
-;;;; TYPES
-
-(deftype var-name () 'symbol)
-
-(deftype variable-type () '(member :special :lexical :symbol-macro :constant))
-
-(deftype declaration-alist () 'list)
-
-(deftype function-name () 'symbol)
-
-(deftype function-type () '(member :function :macro :special-form))
-
-(deftype lexicalp () 'boolean)
-
-(deftype declaration-name () 'symbol)
-
-(deftype macro-name () 'symbol)
-
-(deftype lambda-list () 'list)
-
-(deftype body () 'list)
-
-(deftype lambda-expression () 'list)
-
-;;;; FTYPES
-
-(declaim
- (ftype (function (var-name &optional (or null environment))
-         (values (or null variable-type) lexicalp declaration-alist &optional))
-        variable-information)
- (ftype (function (function-name &optional (or null environment))
-         (values (or null function-type) lexicalp declaration-alist &optional))
-        function-information)
- (ftype (function (declaration-name &optional (or null environment))
-         (values t &optional))
-        declaration-information)
- (ftype (function
-         ((or null environment) &key (:variable list) (:symbol-macro list)
-          (:function list) (:macro list) (:declare list) (:name t))
-         (values environment &optional))
-        augment-environment)
- (ftype (function (macro-name lambda-list body &optional (or null environment))
-         (values lambda-expression &optional))
-        parse-macro)
- (ftype (function (lambda-expression &optional (or null environment))
-         (values function &optional))
-        enclose)
- (ftype (function (symbol &optional (or null environment))
-         (values (or null function) &optional))
-        macro-function)
- (ftype (function (t &optional (or null environment))
-         (values t boolean &optional))
-        macroexpand-1))
 
 ;;;; IMPLEMENTATIONS
 ;;;; CONSTRUCTOR.
