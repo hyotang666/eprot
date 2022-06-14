@@ -173,6 +173,12 @@
        ((null ,var) ,<return>)
     ,@body))
 
+(defun declaration-handlers (env)
+  (do-env (e env)
+    (let ((handlers (environment-declaration-handlers e)))
+      (when handlers
+        (return handlers)))))
+
 ;;;; SPECIAL VARIABLE
 
 (defvar *environments* (make-hash-table :test #'eq))
@@ -252,17 +258,12 @@
 ;;;; DEFINE-DECLARATION
 
 (defun list-all-declarations (&optional (env *environment*))
-  (uiop:while-collecting (acc)
-    (do-env (e env)
-      (when (environment-declaration-handlers e)
-        (loop :for decl-name :being :each :hash-key :of
-                   (environment-declaration-handlers e)
-              :do (acc decl-name))))))
+  (loop :for decl-name :being :each :hash-key :of (declaration-handlers env)
+        :collect decl-name))
 
 (defmacro define-declaration (decl-name lambda-list &body body)
   `(progn
-    (setf (gethash ',decl-name
-                   (environment-declaration-handlers *environment*))
+    (setf (gethash ',decl-name (declaration-handlers *environment*))
             (lambda ,lambda-list ,@body))
     ',decl-name))
 
@@ -310,7 +311,7 @@
 
 (define-declaration declaration (form env)
   (dolist (decl-name (cdr form))
-    (setf (gethash decl-name (environment-declaration-handlers env)) nil))
+    (setf (gethash decl-name (declaration-handlers env)) nil))
   (values :declare form))
 
 (define-declaration dynamic-extent (form env)
@@ -330,9 +331,7 @@
 (defun default-decl-handler (decl-form env)
   (cond
     (;; Is declaration known one?
-     (nth-value 1
-                (gethash (car decl-form)
-                         (environment-declaration-handlers env)))
+     (nth-value 1 (gethash (car decl-form) (declaration-handlers env)))
      nil)
     (;; Standard requires type-specifier is treated as type declaration.
      (millet:type-specifier-p (car decl-form))
@@ -344,11 +343,7 @@
 (defun declaration-handler (decl-name &optional env)
   (if env
       ;; in order to accept { decl-name : nil } as just known declaration by proclaim.
-      (or (do-env (e env)
-            (let ((handlers (environment-declaration-handlers e)))
-              (when handlers
-                (return (gethash decl-name handlers)))))
-          'default-decl-handler)
+      (or (gethash decl-name (declaration-handlers env)) 'default-decl-handler)
       'default-decl-handler))
 
 (defun parse-declaration-spec (decl-spec &optional env)
