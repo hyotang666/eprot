@@ -35,6 +35,8 @@
 
 (in-package :eprot)
 
+(declaim (optimize speed))
+
 ;;;; TODO
 #|
 * defmacro
@@ -63,6 +65,8 @@
   ())
 
 (defun did-you-mean (out name sellection)
+  #+sbcl ; Formatter this. Out of our responsibility.
+  (declare (sb-ext:muffle-conditions sb-ext:compiler-note))
   (apply (formatter "Did you mean ~#[~;~S~;~S or ~S~:;~S, ~S, or ~S~] ?") out
          (fuzzy-match:fuzzy-match (symbol-name name) sellection)))
 
@@ -318,7 +322,8 @@
   (let* ((env (or env *environment*))
          (handler (declaration-handler (car decl-spec) env)))
     (when handler
-      (multiple-value-call #'make-decl-spec (funcall handler decl-spec env)))))
+      (multiple-value-call #'make-decl-spec
+        (funcall (coerce handler 'function) decl-spec env)))))
 
 ;;;; PROCLAIM
 
@@ -517,8 +522,9 @@
                (let ((definition (assoc form (environment-symbol-macro e))))
                  (when definition
                    (return
-                    (funcall *macroexpand-hook* (constantly (cadr definition))
-                             form environment)))))))
+                    (funcall (coerce *macroexpand-hook* 'function)
+                             (constantly (cadr definition)) form
+                             environment)))))))
         (if exists?
             (values exists? t)
             (values form nil)))
@@ -526,7 +532,8 @@
           (values form nil)
           (let ((expander (macro-function (car form) environment)))
             (if expander
-                (values (funcall *macroexpand-hook* expander form environment)
+                (values (funcall (coerce *macroexpand-hook* 'function) expander
+                                 form environment)
                         t)
                 (values form nil))))))
 
