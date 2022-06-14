@@ -2,7 +2,9 @@
 
 (defpackage :eprot
   (:use :cl)
-  (:shadow . #0=(macro-function macroexpand-1 macroexpand *macroexpand-hook*))
+  (:shadow .
+           #0=(macro-function macroexpand-1 macroexpand *macroexpand-hook*
+                              proclaim))
   (:export ; cl things.
            .
            #0#)
@@ -39,7 +41,6 @@
 * compiler-macro-function
 * compiler-macroexpand-1
 * compiler-macroexpand
-* proclaim
 * declaim
 * defun
 * defconstant
@@ -65,7 +66,7 @@
   (symbol-macro nil :type list :read-only t)
   (function nil :type list :read-only t)
   (macro nil :type list :read-only t)
-  (declare nil :type list :read-only t)
+  (declare nil :type list)
   (next nil :type (or null environment) :read-only t)
   (declaration-handlers (make-hash-table :test #'eq)
                         :type hash-table
@@ -145,7 +146,8 @@
                   (cdr form)))))
 
 (define-declaration declaration (form env)
-  (declare (ignore env))
+  (dolist (decl-name (cdr form))
+    (setf (gethash decl-name (environment-declaration-handlers env)) nil))
   (values :declare form))
 
 (define-declaration dynamic-extent (form env)
@@ -187,6 +189,13 @@
   (let ((handler (declaration-handler (car decl-spec) env)))
     (when handler
       (multiple-value-call #'make-decl-spec (funcall handler decl-spec env)))))
+
+;;;; PROCLAIM
+
+(defun proclaim (decl-spec)
+  (let ((spec (parse-declaration-spec decl-spec *environment*)))
+    (when spec
+      (push spec (environment-declare *environment*)))))
 
 ;;;; DECL-SPEC
 
