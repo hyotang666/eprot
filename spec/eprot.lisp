@@ -278,9 +278,15 @@
 #?(variable-information 'symbol-macro
 			(augment-environment nil :symbol-macro '((symbol-macro :def))))
 => :SYMBOL-MACRO
-; When VAR-NAME is specified as variable lexically, :lexical will be returned.
+; When the environment is a toplevel one, i.e. the first argument is NIL or :standard environment,
+; such environment is treated as global one.
 #?(variable-information 'lexical
 			(augment-environment nil :variable '(lexical)))
+=> NIL ; because it is global, not lexical one.
+; When VAR-NAME is specified as variable lexically, :lexical will be returned.
+#?(variable-information 'lexical
+			(augment-environment (augment-environment nil)
+					     :variable '(lexical)))
 => :LEXICAL
 ; When VAR-NAME is specified as special, :special will be returned.
 #?(variable-information 'var
@@ -291,9 +297,13 @@
 #?(variable-information 'var) => NIL
 
 ; result 2 := boolean
-; When VAR-NAME can be refered in the ENVIRONMENT, true will be returned.
+; When VAR-NAME can be refered as lexical one in the ENVIRONMENT, true will be returned.
 #?(nth-value 1 (variable-information 'var
 				     (augment-environment nil :variable '(var))))
+=> NIL ; Because it is global one.
+#?(nth-value 1 (variable-information 'var
+				     (augment-environment (augment-environment nil)
+							  :variable '(var))))
 => T
 ; Otherwise NIL is returned.
 #?(nth-value 1 (variable-information 'var)) => NIL
@@ -337,13 +347,29 @@
 ; result 1 := (member :special-form :macro :function nil)
 ; TODO case :special-form.
 ; If FUN-NAME is specified as macro, :MACRO will be returned.
+; Case in the toplevel environment.
 #?(function-information 'name
 			(augment-environment nil :macro `((name ,#'car))))
+:values (:MACRO NIL NIL)
+; Case in the lexical environment.
+#?(function-information 'name
+			(augment-environment (augment-environment nil)
+					     :macro `((name ,#'car))))
 :values (:MACRO T NIL)
+#?(function-information 'name
+			(augment-environment nil :macro `((name ,#'car))))
+:values (:MACRO NIL NIL)
 ; If FUN-NAME is specified as function, :FUNCTION will be returned.
+; Case in the toplevel environment.
 #?(function-information 'name
 			(augment-environment nil :function '(name)))
+:values (:FUNCTION NIL NIL)
+; Case in the lexical environment.
+#?(function-information 'name
+			(augment-environment (augment-environment nil)
+					     :function '(name)))
 :values (:FUNCTION T NIL)
+
 ; Otherwise NIL is returned.
 #?(function-information 'name) :values (NIL NIL NIL)
 
@@ -351,8 +377,15 @@
 
 ; result 3 := list
 ; If FUN-NAME has declarations, such declarations are returned.
+; Case in the toplevel environment.
 #?(function-information 'name
 			(augment-environment nil :function '(name)
+					     :declare '((ftype (function * fixnum) name))))
+:values (:FUNCTION NIL ((FTYPE . (FUNCTION * FIXNUM))))
+; Case in the lexical environment.
+#?(function-information 'name
+			(augment-environment (augment-environment nil)
+					     :function '(name)
 					     :declare '((ftype (function * fixnum) name))))
 :values (:FUNCTION T ((FTYPE . (FUNCTION * FIXNUM))))
 
