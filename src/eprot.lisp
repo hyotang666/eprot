@@ -344,7 +344,10 @@
 (defun declaration-handler (decl-name &optional env)
   (if env
       ;; in order to accept { decl-name : nil } as just known declaration by proclaim.
-      (or (gethash decl-name (environment-declaration-handlers env))
+      (or (do-env (e env)
+            (let ((handlers (environment-declaration-handlers e)))
+              (when handlers
+                (return (gethash decl-name handlers)))))
           'default-decl-handler)
       'default-decl-handler))
 
