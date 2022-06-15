@@ -2,7 +2,7 @@
 (in-package :asdf)
 (defsystem "eprot"
   :version
-  "0.19.0"
+  "0.20.0"
   :depends-on
   (
    "alexandria"         ; Public domain utilities.

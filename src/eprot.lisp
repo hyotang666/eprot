@@ -72,17 +72,33 @@
          (fuzzy-match:fuzzy-match (symbol-name name) sellection)))
 
 ;;;; ENVIRONMENT OBJECT
-;; CLtL2: In all of these functions the argument named env is an environment object.
-;;        Optional env arguments default to nil,
+#| CLtL2 quotes:
+ | In all of these functions the argument named env is an environment object.
+ | Optional env arguments default to nil,
+ | which represents the local null lexical environment (containing only global definitions and proclamations that are present in the run-time environment).
+ |#
+
+#| EPROT NOTE:
+ | In order to provide some environments for one lisp implementation,
+ | in EPROT design, the NIL itself does not represent the local null lexical environment.
+ | The environment that NEXT slot is NIL represents the local null lexical environment.
+ | Additionally, we provide the CL:PACKAGE like features, in other words,
+ | we provide a special variable *ENVIRONMNET* which represents the current environment.
+ | Hence, the NIL represents the current null lexical environment in EPROT.
+ |#
 
 (defstruct environment
-  (name nil :read-only t)
-  (variable nil :type list :read-only t)
-  (symbol-macro nil :type list :read-only t)
-  (function nil :type list :read-only t)
-  (macro nil :type list :read-only t)
+  (name nil)
+  (variable nil :type list)
+  (symbol-macro nil :type list)
+  (function nil :type list)
+  (macro nil :type list)
   (declare nil :type list)
+  ;; The pointer to point the parent environment.
+  ;; If this is NIL, such an environment is a null lexical environment.
+  ;; NOTE: Our ENVIRONMENTs are designed as the stack-like.
   (next nil :type (or null environment) :read-only t)
+  ;; Only the null lexical environment has the table, otherwise nil.
   (declaration-handlers nil :type (or null hash-table) :read-only t))
 
 (defmethod print-object ((o environment) output)
@@ -175,12 +191,6 @@
        ((null ,var) ,<return>)
     ,@body))
 
-(defun declaration-handlers (env)
-  (do-env (e env)
-    (let ((handlers (environment-declaration-handlers e)))
-      (when handlers
-        (return handlers)))))
-
 ;;;; SPECIAL VARIABLE
 
 (defvar *environments* (make-hash-table :test #'eq))
@@ -214,8 +224,7 @@
   `(let ((*environment*
           ,(case use
              ((nil)
-              `(make-environment :declaration-handlers (make-hash-table :test #'eq)
-                                 :name :null))
+              `(make-environment :declaration-handlers (make-hash-table :test #'eq)))
              (:standard `(copy-env nil))
              (otherwise `(copy-env (find-environment ',use))))))
      ,@(mapcar (lambda (definition) `(define-declaration ,@definition))
@@ -242,12 +251,26 @@
 
 (in-environment :standard)
 
-(defun copy-env (&optional (env nil suppliedp))
+;;;; MISCELLANEOUS
+
+(defun null-lexical-environment (&optional env)
+  "Return the null lexical environment of the ENV.
+If ENV is NIL, the current environment's one is returned."
+  (do-env (e (or env *environment*))
+    (when (null (environment-next e))
+      (return e))))
+
+(defun declaration-handlers (&optional env)
+  "Return the declaration handlers table of the ENV.
+If ENV is NIL, the current environment's one is returned."
+  (environment-declaration-handlers (null-lexical-environment env)))
+
+(defun copy-env (&optional env)
+  "Return the fresh copied environment of the ENV.
+If ENV is NIL, the current null lexical environment's one is returned."
   (with-slots (name variable symbol-macro function macro declare next
                declaration-handlers)
-      (if suppliedp
-          (or env (find-environment :standard))
-          *environment*)
+      (or env (null-lexical-environment))
     (make-environment :name name
                       :variable variable
                       :symbol-macro symbol-macro
@@ -262,8 +285,7 @@
 ;;;; DEFINE-DECLARATION
 
 (defun list-all-declarations (&optional env)
-  (loop :for decl-name :being :each :hash-key :of
-             (declaration-handlers (or env *environment*))
+  (loop :for decl-name :being :each :hash-key :of (declaration-handlers env)
         :collect decl-name))
 
 (defmacro define-declaration (decl-name lambda-list &body body)
@@ -352,7 +374,7 @@
       'default-decl-handler))
 
 (defun parse-declaration-spec (decl-spec &optional env)
-  (let* ((env (or env *environment*))
+  (let* ((env (or env (null-lexical-environment)))
          (handler (declaration-handler (car decl-spec) env)))
     (when handler
       (multiple-value-call #'make-decl-spec
@@ -420,25 +442,41 @@
   (unless (typep env '(or null environment))
     (error 'type-error :datum env :expected-type '(or null environment)))
   ;; The body.
-  (let ((env (or env *environment*)))
-    (make-environment :variable variable
-                      :symbol-macro symbol-macro
-                      :function function
-                      :macro macro
-                      :declare (loop :for spec :in declare
-                                     :for decl-spec
-                                          = (parse-declaration-spec spec env)
-                                     :when decl-spec
-                                       :collect :it)
-                      :name name
-                      :next env)))
+  (if env
+      (make-environment :variable variable
+                        :symbol-macro symbol-macro
+                        :function function
+                        :macro macro
+                        :declare (loop :for spec :in declare
+                                       :for decl-spec
+                                            = (parse-declaration-spec spec env)
+                                       :when decl-spec
+                                         :collect :it)
+                        :name name
+                        :next env)
+      (let ((new (copy-env)))
+        (with-slots ((v variable) (sm symbol-macro) (f function) (m macro)
+                     (d declare) (n name))
+            new
+          (alexandria:appendf v variable)
+          (alexandria:appendf sm symbol-macro)
+          (alexandria:appendf f function)
+          (alexandria:appendf m macro)
+          (alexandria:appendf d
+                              (loop :for spec :in declare
+                                    :for decl-spec
+                                         = (parse-declaration-spec spec new)
+                                    :when decl-spec
+                                      :collect :it))
+          (setf n name))
+        new)))
 
 ;;;; ACCESSOR.
 ;;; VARIABLE-INFORMATION.
 
-(defun related-declarations (name type env)
+(defun related-declarations (name type &optional env)
   (uiop:while-collecting (acc)
-    (do-env (e env)
+    (do-env (e (or env (null-lexical-environment)))
       (dolist (spec (environment-declare e))
         (let ((info
                (and (or (eq type (decl-spec-type spec))
@@ -449,8 +487,7 @@
           (when info
             (acc (cons (second info) (third info)))))))))
 
-(defun toplevel-environment-p (env)
-  (member (environment-name (environment-next env)) '(:standard :null)))
+(defun null-lexical-environment-p (env) (null (environment-next env)))
 
 (defun variable-information (var-name &optional env)
   ;; CLTL2 recommends there error checks.
@@ -461,19 +498,20 @@
      (error 'type-error :datum env :expected-type '(or null environment))))
   (if (constantp var-name)
       (values :constant t nil)
-      (do-env (e env #|FIXME|# (values nil nil nil))
+      (do-env (e (or env (null-lexical-environment)) #|FIXME|#
+               (values nil nil nil))
         (when (find var-name (environment-variable e))
           (let ((decls (related-declarations var-name :variable e)))
             (return
              (values (cond ((assoc 'special decls) :special)
-                           ((toplevel-environment-p e) nil)
+                           ((null-lexical-environment-p e) nil)
                            (t :lexical))
-                     (not (toplevel-environment-p e))
+                     (not (null-lexical-environment-p e))
                      decls))))
         (when (assoc var-name (environment-symbol-macro e))
           (return
            (values :symbol-macro
-                   (not (toplevel-environment-p e))
+                   (not (null-lexical-environment-p e))
                    (related-declarations var-name :variable e)))))))
 
 ;;; FUNCTION-INFORMATION.
@@ -485,16 +523,16 @@
    (check-type fun-name function-name)
    (unless (typep env '(or null environment))
      (error 'type-error :datum env :expected-type '(or null environment))))
-  (do-env (e env #|FIXME|# (values nil nil nil))
+  (do-env (e (or env (null-lexical-environment)) #|FIXME|# (values nil nil nil))
     (when (find fun-name (environment-function e))
       (return
        (values :function
-               (not (toplevel-environment-p e))
+               (not (null-lexical-environment-p e))
                (related-declarations fun-name :function e))))
     (when (assoc fun-name (environment-macro e))
       (return
        (values :macro
-               (not (toplevel-environment-p e))
+               (not (null-lexical-environment-p e))
                (related-declarations fun-name :function e))))))
 
 ;;; DECLARATION-INFORMATION
@@ -507,7 +545,7 @@
    (unless (typep env '(or null environment))
      (error 'type-error :datum env :expected-type '(or null environment))))
   (uiop:while-collecting (acc)
-    (do-env (e env)
+    (do-env (e (or env (null-lexical-environment)))
       (dolist (spec (environment-declare e))
         (if (eq decl-name (decl-spec-type spec))
             (acc (decl-spec-info spec)))))))
@@ -547,7 +585,7 @@
 (defun macro-function (symbol &optional env)
   #+(or clisp allegro abcl)
   (progn (check-type symbol symbol))
-  (do-env (e env)
+  (do-env (e (or env (null-lexical-environment)))
     (let ((definition (assoc symbol (environment-macro e))))
       (return (cadr definition)))))
 
@@ -558,25 +596,26 @@
 ;;;; MACROEXPAND-1
 
 (defun macroexpand-1 (form &optional env)
-  (if (symbolp form)
-      (let ((exists?
-             (do-env (e env)
-               (let ((definition (assoc form (environment-symbol-macro e))))
-                 (when definition
-                   (return
-                    (funcall (coerce *macroexpand-hook* 'function)
-                             (constantly (cadr definition)) form env)))))))
-        (if exists?
-            (values exists? t)
-            (values form nil)))
-      (if (atom form)
-          (values form nil)
-          (let ((expander (macro-function (car form) env)))
-            (if expander
-                (values (funcall (coerce *macroexpand-hook* 'function) expander
-                                 form env)
-                        t)
-                (values form nil))))))
+  (let ((env (or env (null-lexical-environment))))
+    (if (symbolp form)
+        (let ((exists?
+               (do-env (e env)
+                 (let ((definition (assoc form (environment-symbol-macro e))))
+                   (when definition
+                     (return
+                      (funcall (coerce *macroexpand-hook* 'function)
+                               (constantly (cadr definition)) form env)))))))
+          (if exists?
+              (values exists? t)
+              (values form nil)))
+        (if (atom form)
+            (values form nil)
+            (let ((expander (macro-function (car form) env)))
+              (if expander
+                  (values (funcall (coerce *macroexpand-hook* 'function)
+                                   expander form env)
+                          t)
+                  (values form nil)))))))
 
 ;;;; MACROEXPAND
 
