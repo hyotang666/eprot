@@ -273,10 +273,10 @@ If ENV is NIL, the current null lexical environment's one is returned."
                declaration-handlers)
       (or env (null-lexical-environment))
     (make-environment :name name
-                      :variable variable
-                      :symbol-macro symbol-macro
-                      :function function
-                      :macro macro
+                      :variable (copy-list variable)
+                      :symbol-macro (copy-list symbol-macro)
+                      :function (copy-list function)
+                      :macro (copy-list macro)
                       :declare (copy-list declare)
                       :next next
                       :declaration-handlers (and declaration-handlers
