@@ -640,3 +640,45 @@
 
 ;;;; Exceptional-Situations:
 
+(requirements-about PROCLAIM :doc-type function)
+
+;;;; Description:
+
+#+syntax (PROCLAIM DECL-SPEC) ; => result
+
+;;;; Arguments and Values:
+
+; decl-spec := (decl-name . args), otherwise an error is signaled.
+#?(proclaim :not-list) :signals error
+
+; result := implementation dependent.
+#?(let ((*environment* (augment-environment nil)))
+    (proclaim '(type fixnum a)))
+=> implementation-dependent
+
+;;;; Affected By:
+
+;;;; Side-Effects:
+; Destructively modify current environment, i.e. *environment*.
+; Case global one.
+#?(let ((*environment* (augment-environment nil)))
+    (proclaim '(type fixnum a))
+    (variable-information 'a))
+:values (NIL NIL ((TYPE . FIXNUM)))
+; Case lexical non-null one.
+#?(let ((*environment* (augment-environment *environment*)))
+    (proclaim '(type fixnum a))
+    (variable-information 'a *environment*))
+:values (:LEXICAL T ((TYPE . FIXNUM)))
+; NOTE: Pitfalls.
+#?(let ((*environment* (augment-environment *environment*))) ; <--- Non null env.
+    (proclaim '(type fixnum a)) ; Since non-null env, this declaration becomes local one.
+    (variable-information 'a)) ; <--- Null lexical env, in other words, specify global info.
+:values (NIL NIL NIL)
+
+;;;; Notes:
+
+;;;; Exceptional-Situations:
+; If DECL-NAME is unknown, an error is signaled.
+#?(proclaim '(no-such declaration)) :signals unknown-declaration
+
