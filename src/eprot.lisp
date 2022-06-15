@@ -374,11 +374,12 @@ If ENV is NIL, the current null lexical environment's one is returned."
       'default-decl-handler))
 
 (defun parse-declaration-spec (decl-spec &optional env)
-  (let* ((env (or env (null-lexical-environment)))
-         (handler (declaration-handler (car decl-spec) env)))
-    (when handler
-      (multiple-value-call #'make-decl-spec
-        (funcall (coerce handler 'function) decl-spec env)))))
+  (let ((env (or env (null-lexical-environment))))
+    (multiple-value-bind (type info)
+        (funcall (coerce (declaration-handler (car decl-spec) env) 'function)
+                 decl-spec env)
+      (when type
+        (make-decl-spec type info)))))
 
 ;;;; PROCLAIM
 
