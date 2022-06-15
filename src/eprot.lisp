@@ -72,6 +72,7 @@
          (fuzzy-match:fuzzy-match (symbol-name name) sellection)))
 
 ;;;; ENVIRONMENT OBJECT
+;; CLtL2: In all of these functions the argument named env is an environment object.
 
 (defstruct environment
   (name nil :read-only t)
@@ -193,8 +194,8 @@
   (or (gethash env-name *environments*)
       (and errorp (error 'missing-environment :name env-name))))
 
-(defun store-environment (env-name environment)
-  (setf (gethash env-name *environments*) environment))
+(defun store-environment (env-name env)
+  (setf (gethash env-name *environments*) env))
 
 (defvar *environment*)
 
@@ -444,8 +445,8 @@
           (when info
             (acc (cons (second info) (third info)))))))))
 
-(defun toplevel-environment-p (environment)
-  (member (environment-name (environment-next environment)) '(:standard :null)))
+(defun toplevel-environment-p (env)
+  (member (environment-name (environment-next env)) '(:standard :null)))
 
 (defun variable-information (var-name &optional env)
   ;; CLTL2 recommends there error checks.
@@ -539,10 +540,10 @@
 
 ;;;; MACRO-FUNCTION
 
-(defun macro-function (symbol &optional environment)
+(defun macro-function (symbol &optional env)
   #+(or clisp allegro abcl)
   (progn (check-type symbol symbol))
-  (do-env (e environment)
+  (do-env (e env)
     (let ((definition (assoc symbol (environment-macro e))))
       (return (cadr definition)))))
 
@@ -552,33 +553,32 @@
 
 ;;;; MACROEXPAND-1
 
-(defun macroexpand-1 (form &optional environment)
+(defun macroexpand-1 (form &optional env)
   (if (symbolp form)
       (let ((exists?
-             (do-env (e environment)
+             (do-env (e env)
                (let ((definition (assoc form (environment-symbol-macro e))))
                  (when definition
                    (return
                     (funcall (coerce *macroexpand-hook* 'function)
-                             (constantly (cadr definition)) form
-                             environment)))))))
+                             (constantly (cadr definition)) form env)))))))
         (if exists?
             (values exists? t)
             (values form nil)))
       (if (atom form)
           (values form nil)
-          (let ((expander (macro-function (car form) environment)))
+          (let ((expander (macro-function (car form) env)))
             (if expander
                 (values (funcall (coerce *macroexpand-hook* 'function) expander
-                                 form environment)
+                                 form env)
                         t)
                 (values form nil))))))
 
 ;;;; MACROEXPAND
 
-(defun macroexpand (form &optional environment)
+(defun macroexpand (form &optional env)
   (multiple-value-bind (form expanded?)
-      (macroexpand-1 form environment)
+      (macroexpand-1 form env)
     (if expanded?
-        (macroexpand form environment)
+        (macroexpand form env)
         form)))
