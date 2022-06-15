@@ -302,28 +302,40 @@ If ENV is NIL, the current null lexical environment's one is returned."
                      'pprint-define-declaration)
 
 (define-declaration special (form env)
-  (declare (ignore env))
-  (values :variable (mapcar (lambda (var) (list var (car form) t)) (cdr form))))
+  (destructuring-bind
+      (decl-name &rest vars)
+      form
+    (alexandria:unionf (environment-variable env) vars)
+    (values :variable (mapcar (lambda (var) (list var decl-name t)) vars))))
 
 (define-declaration type (form env)
-  (declare (ignore env))
-  (values :variable
-          (mapcar (lambda (var) (list var (car form) (cadr form)))
-                  (cddr form))))
+  (destructuring-bind
+      (decl-name type &rest vars)
+      form
+    (alexandria:unionf (environment-variable env) vars)
+    (values :variable (mapcar (lambda (var) (list var decl-name type)) vars))))
 
 (define-declaration ftype (form env)
-  (declare (ignore env))
-  (values :function
-          (mapcar (lambda (var) (list var (car form) (cadr form)))
-                  (cddr form))))
+  (destructuring-bind
+      (decl-name ftype &rest names)
+      form
+    (alexandria:unionf (environment-function env) names)
+    (values :function
+            (mapcar (lambda (var) (list var decl-name ftype)) names))))
 
 (define-declaration inline (form env)
-  (declare (ignore env))
-  (values :function (mapcar (lambda (var) (list var (car form) t)) (cdr form))))
+  (destructuring-bind
+      (decl-name &rest names)
+      form
+    (alexandria:unionf (environment-function env) names)
+    (values :function (mapcar (lambda (var) (list var decl-name t)) names))))
 
 (define-declaration notinline (form env)
-  (declare (ignore env))
-  (values :function (mapcar (lambda (var) (list var (car form) t)) (cdr form))))
+  (destructuring-bind
+      (decl-name &rest names)
+      form
+    (alexandria:unionf (environment-function env) names)
+    (values :function (mapcar (lambda (var) (list var decl-name t)) names))))
 
 (define-declaration optimize (form env)
   (declare (ignore env))
@@ -342,7 +354,11 @@ If ENV is NIL, the current null lexical environment's one is returned."
   (values :declare form))
 
 (define-declaration dynamic-extent (form env)
-  (declare (ignore env))
+  (alexandria:unionf (environment-variable env) (remove-if #'listp (cdr form)))
+  (alexandria:unionf (environment-function env)
+                     (loop :for name :in (cdr form)
+                           :when (typep name '(cons (eql function) *))
+                             :collect (cadr name)))
   (values :bind form))
 
 (define-condition unknown-declaration (eprot-error cell-error)
@@ -443,34 +459,26 @@ If ENV is NIL, the current null lexical environment's one is returned."
   (unless (typep env '(or null environment))
     (error 'type-error :datum env :expected-type '(or null environment)))
   ;; The body.
-  (if env
-      (make-environment :variable variable
-                        :symbol-macro symbol-macro
-                        :function function
-                        :macro macro
-                        :declare (loop :for spec :in declare
-                                       :for decl-spec
-                                            = (parse-declaration-spec spec env)
-                                       :when decl-spec
-                                         :collect :it)
-                        :name name
-                        :next env)
-      (let ((new (copy-env)))
-        (with-slots ((v variable) (sm symbol-macro) (f function) (m macro)
-                     (d declare) (n name))
-            new
-          (alexandria:appendf v variable)
-          (alexandria:appendf sm symbol-macro)
-          (alexandria:appendf f function)
-          (alexandria:appendf m macro)
-          (alexandria:appendf d
-                              (loop :for spec :in declare
-                                    :for decl-spec
-                                         = (parse-declaration-spec spec new)
-                                    :when decl-spec
-                                      :collect :it))
-          (setf n name))
-        new)))
+  (let ((*environment*
+         (if env
+             (make-environment :variable variable
+                               :symbol-macro symbol-macro
+                               :function function
+                               :macro macro
+                               :name name
+                               :next env)
+             (let ((new (copy-env)))
+               (with-slots ((v variable) (sm symbol-macro) (f function)
+                            (m macro) (n name))
+                   new
+                 (alexandria:appendf v variable)
+                 (alexandria:appendf sm symbol-macro)
+                 (alexandria:appendf f function)
+                 (alexandria:appendf m macro)
+                 (setf n name))
+               new))))
+    (mapc #'proclaim declare)
+    *environment*))
 
 ;;;; ACCESSOR.
 ;;; VARIABLE-INFORMATION.
