@@ -21,6 +21,7 @@
            #:eprot-error
            #:unknown-declaration
            #:missing-environment
+           #:bad-declaration-specifier
            ;;;; ENVIRONMENT
            #:environment
            #:*environment*
@@ -308,7 +309,19 @@ If ENV is NIL, the current null lexical environment's one is returned."
     (alexandria:unionf (environment-variable env) vars)
     (values :variable (mapcar (lambda (var) (list var decl-name t)) vars))))
 
+(define-condition bad-declaration-specifier (eprot-error type-error)
+  ()
+  (:report
+   (lambda (this out)
+     (format out "~S is not ~S." (type-error-datum this)
+             (type-error-expected-type this)))))
+
 (define-declaration type (form env)
+  (declare (list form))
+  (unless (< 2 (length form))
+    (error 'bad-declaration-specifier
+           :datum form
+           :expected-type '(decl-name type &rest vars)))
   (destructuring-bind
       (decl-name type &rest vars)
       form
@@ -316,6 +329,11 @@ If ENV is NIL, the current null lexical environment's one is returned."
     (values :variable (mapcar (lambda (var) (list var decl-name type)) vars))))
 
 (define-declaration ftype (form env)
+  (declare (list form))
+  (unless (< 2 (length form))
+    (error 'bad-declaration-specifier
+           :datum form
+           :expected-type '(decl-name ftype &rest fun-names)))
   (destructuring-bind
       (decl-name ftype &rest names)
       form
