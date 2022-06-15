@@ -541,7 +541,7 @@ If ENV is NIL, the current null lexical environment's one is returned."
    (unless (typep env '(or null environment))
      (error 'type-error :datum env :expected-type '(or null environment))))
   (if (constantp var-name)
-      (values :constant t nil)
+      (values :constant nil nil)
       (do-env (e (or env (null-lexical-environment)) #|FIXME|#
                (values nil nil nil))
         (when (find var-name (environment-variable e))
