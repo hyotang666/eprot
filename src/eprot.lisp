@@ -289,6 +289,13 @@ If ENV is NIL, the current null lexical environment's one is returned."
   (loop :for decl-name :being :each :hash-key :of (declaration-handlers env)
         :collect decl-name))
 
+(defun extend (type env contents)
+  "Destructively extend the specified TYPE slot of the ENV with CONTENTS."
+  (ecase type
+    (:variable (alexandria:unionf (environment-variable env) contents))
+    (:function (alexandria:unionf (environment-function env) contents)))
+  env)
+
 (defmacro define-declaration (decl-name lambda-list &body body)
   `(progn
     (setf (gethash ',decl-name (declaration-handlers *environment*))
@@ -306,7 +313,7 @@ If ENV is NIL, the current null lexical environment's one is returned."
   (destructuring-bind
       (decl-name &rest vars)
       form
-    (alexandria:unionf (environment-variable env) vars)
+    (extend :variable env vars)
     (values :variable (mapcar (lambda (var) (list var decl-name t)) vars))))
 
 (define-condition bad-declaration-specifier (eprot-error type-error)
@@ -325,7 +332,7 @@ If ENV is NIL, the current null lexical environment's one is returned."
   (destructuring-bind
       (decl-name type &rest vars)
       form
-    (alexandria:unionf (environment-variable env) vars)
+    (extend :variable env vars)
     (values :variable (mapcar (lambda (var) (list var decl-name type)) vars))))
 
 (define-declaration ftype (form env)
@@ -337,7 +344,7 @@ If ENV is NIL, the current null lexical environment's one is returned."
   (destructuring-bind
       (decl-name ftype &rest names)
       form
-    (alexandria:unionf (environment-function env) names)
+    (extend :function env names)
     (values :function
             (mapcar (lambda (var) (list var decl-name ftype)) names))))
 
@@ -345,14 +352,14 @@ If ENV is NIL, the current null lexical environment's one is returned."
   (destructuring-bind
       (decl-name &rest names)
       form
-    (alexandria:unionf (environment-function env) names)
+    (extend :function env names)
     (values :function (mapcar (lambda (var) (list var decl-name t)) names))))
 
 (define-declaration notinline (form env)
   (destructuring-bind
       (decl-name &rest names)
       form
-    (alexandria:unionf (environment-function env) names)
+    (extend :function env names)
     (values :function (mapcar (lambda (var) (list var decl-name t)) names))))
 
 (define-declaration optimize (form env)
@@ -372,11 +379,11 @@ If ENV is NIL, the current null lexical environment's one is returned."
   (values :declare form))
 
 (define-declaration dynamic-extent (form env)
-  (alexandria:unionf (environment-variable env) (remove-if #'listp (cdr form)))
-  (alexandria:unionf (environment-function env)
-                     (loop :for name :in (cdr form)
-                           :when (typep name '(cons (eql function) *))
-                             :collect (cadr name)))
+  (extend :variable env (remove-if #'listp (cdr form)))
+  (extend :function env
+          (loop :for name :in (cdr form)
+                :when (typep name '(cons (eql function) *))
+                  :collect (cadr name)))
   (values :bind form))
 
 (define-condition unknown-declaration (eprot-error cell-error)
