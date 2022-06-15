@@ -73,6 +73,7 @@
 
 ;;;; ENVIRONMENT OBJECT
 ;; CLtL2: In all of these functions the argument named env is an environment object.
+;;        Optional env arguments default to nil,
 
 (defstruct environment
   (name nil :read-only t)
@@ -241,10 +242,12 @@
 
 (in-environment :standard)
 
-(defun copy-env (&optional (env *environment*))
+(defun copy-env (&optional (env nil suppliedp))
   (with-slots (name variable symbol-macro function macro declare next
                declaration-handlers)
-      (or env (find-environment :standard))
+      (if suppliedp
+          (or env (find-environment :standard))
+          *environment*)
     (make-environment :name name
                       :variable variable
                       :symbol-macro symbol-macro
@@ -258,8 +261,9 @@
 
 ;;;; DEFINE-DECLARATION
 
-(defun list-all-declarations (&optional (env *environment*))
-  (loop :for decl-name :being :each :hash-key :of (declaration-handlers env)
+(defun list-all-declarations (&optional env)
+  (loop :for decl-name :being :each :hash-key :of
+             (declaration-handlers (or env *environment*))
         :collect decl-name))
 
 (defmacro define-declaration (decl-name lambda-list &body body)
