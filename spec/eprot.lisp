@@ -254,6 +254,9 @@
 ; If a function also specified as macro, a program-error will be signaled.
 #?(augment-environment nil :function '(a) :macro `((a ,#'car)))
 :signals program-error
+; If the declaration spec does not match its spec, an error is signaled.
+#?(augment-environment nil :declare '((type)))
+:signals bad-declaration-specifier
 
 (requirements-about VARIABLE-INFORMATION :doc-type function)
 
