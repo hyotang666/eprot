@@ -28,6 +28,7 @@
            #:find-environment
            #:defenv
            #:in-environment
+           #:list-all-environments
            ;;;; DECL-SPEC
            #:decl-spec ; object
            #:parse-declaration-spec ; constructor
@@ -201,6 +202,8 @@
   (:report
    (lambda (this out)
      (format out "Missing environment ~S." (cell-error-name this)))))
+
+(defun list-all-environments () (alexandria:hash-table-keys *environments*))
 
 (defun find-environment (env-name &optional (errorp t))
   (or (gethash env-name *environments*)
@@ -390,8 +393,15 @@ If ENV is NIL, the current null lexical environment's one is returned."
   ()
   (:report
    (lambda (this out)
-     (format out "~S is unknown as declaration. ~:@_" (cell-error-name this))
+     (format out
+             "~S is unknown as declaration for current environment ~S. ~:@_"
+             (cell-error-name this) (environment-name *environment*))
      (did-you-mean out (cell-error-name this) (list-all-declarations))
+     (format out
+             " ~:@_Or it may for other environment. ~:@_How to change current environment, use ~S or bind ~S dinamically with ~S."
+             'in-environment '*environment* 'find-environment)
+     (format out " ~:@_To see all environment, evaluate ~S."
+             '(list-all-environments))
      (format out
              " ~:@_Or just not defined yet. ~:@_To see how to define declaration, evaluate ~S."
              `(describe 'define-declaration)))))
