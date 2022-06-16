@@ -394,11 +394,12 @@ If ENV is NIL, the current null lexical environment's one is returned."
   (:report
    (lambda (this out)
      (format out
-             "~S is unknown as declaration for current environment ~S. ~:@_"
-             (cell-error-name this) (environment-name *environment*))
+             "~S is unknown as declaration for current null lexical environment ~S. ~:@_"
+             (cell-error-name this)
+             (environment-name (null-lexical-environment *environment*)))
      (did-you-mean out (cell-error-name this) (list-all-declarations))
      (format out
-             " ~:@_Or it may for other environment. ~:@_How to change current environment, use ~S or bind ~S dinamically with ~S."
+             " ~:@_Or it may for other environment. ~:@_Use ~S or bind ~S dinamically with ~S to change current environment."
              'in-environment '*environment* 'find-environment)
      (format out " ~:@_To see all environment, evaluate ~S."
              '(list-all-environments))
