@@ -29,6 +29,8 @@
            #:defenv
            #:in-environment
            #:list-all-environments
+           ;;;; MISCELLANEOUS HELPERS
+           #:context
            ;;;; DECL-SPEC
            #:decl-spec ; object
            #:parse-declaration-spec ; constructor
@@ -149,6 +151,10 @@
          (ftype (function (env-name &optional boolean)
                  (values (or null environment) &optional))
                 find-environment)
+         ;; Other EPROT APIs.
+         (ftype (function (&optional (or null environment))
+                 (values list &optional))
+                context)
          ;; CLtL2 features.
          (ftype (function (var-name &optional (or null environment))
                  (values (or null variable-type)
@@ -285,6 +291,13 @@ If ENV is NIL, the current null lexical environment's one is returned."
                       :declaration-handlers (and declaration-handlers
                                                  (alexandria:copy-hash-table
                                                    declaration-handlers)))))
+
+(defun context (&optional env)
+  "The list of non null environment names that from null lexical environment to the ENV."
+  (let ((names (list)))
+    (do-env (e (or env (null-lexical-environment *environment*)) names)
+      (let ((name (environment-name e)))
+        (push name names)))))
 
 ;;;; DEFINE-DECLARATION
 
