@@ -234,7 +234,7 @@
      ,@(mapcar (lambda (definition) `(define-declaration ,@definition))
                handler)
      (store-environment ',env-name
-                        (augment-environment *environment*
+                        (augment-environment nil
                                              :variable ,variable
                                              :symbol-macro ,symbol-macro
                                              :function ,function
