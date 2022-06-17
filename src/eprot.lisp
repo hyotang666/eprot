@@ -535,7 +535,7 @@ and compilation-speed (speed of the compilation process).")
                   :collect (cadr name)))
   (values :bind form))
 
-(define-condition unknown-declaration (eprot-error cell-error)
+(define-condition unknown-declaration (warning cell-error)
   ()
   (:report
    (lambda (this out)
@@ -563,7 +563,7 @@ and compilation-speed (speed of the compilation process).")
      (values :variable
              (mapcar (lambda (var) (list var 'type (car decl-form)))
                      (cdr decl-form))))
-    (t (error 'unknown-declaration :name (car decl-form)))))
+    (t (warn 'unknown-declaration :name (car decl-form)))))
 
 (defun declaration-handler (decl-name &optional env)
   (if env
