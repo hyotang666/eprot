@@ -252,13 +252,14 @@
      ,@(mapcan
          (lambda (definition)
            (destructuring-bind
-               (name spec &rest handler)
+               (name spec lambda-list &body body)
                definition
-             `(,@(when spec
-                   `((define-declaration-specifier ,name ,spec
-                       ,@(when (stringp (car handler))
-                           (list (pop handler))))))
-               (define-declaration ,name ,@handler))))
+             (multiple-value-bind (forms decls doc)
+                 (alexandria:parse-body body :documentation t)
+               `(,@(when spec
+                     `((define-declaration-specifier ,name ,spec
+                         ,@(and doc (list doc)))))
+                 (define-declaration ,name ,lambda-list ,@decls ,@forms)))))
          handler)
      (store-environment ',env-name
                         (augment-environment nil
