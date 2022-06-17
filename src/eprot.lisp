@@ -249,8 +249,17 @@
               `(make-environment :declaration-handlers (make-hash-table :test #'eq)))
              (:standard `(copy-env nil))
              (otherwise `(copy-env (find-environment ',use))))))
-     ,@(mapcar (lambda (definition) `(define-declaration ,@definition))
-               handler)
+     ,@(mapcan
+         (lambda (definition)
+           (destructuring-bind
+               (name spec &rest handler)
+               definition
+             `(,@(when spec
+                   `((define-declaration-specifier ,name ,spec
+                       ,@(when (stringp (car handler))
+                           (list (pop handler))))))
+               (define-declaration ,name ,@handler))))
+         handler)
      (store-environment ',env-name
                         (augment-environment nil
                                              :variable ,variable
