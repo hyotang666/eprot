@@ -145,6 +145,15 @@
 
 (deftype env-name () 'symbol)
 
+(deftype binding-name ()
+  '(or var-name (cons (eql function) (cons function-name null))))
+
+(deftype type-specifier () '(satisfies millet:type-specifier-p))
+
+(deftype ftype-specifier () '(or (eql function) (cons (eql function) *)))
+
+(deftype quality () '(or symbol (cons symbol (integer 0 3))))
+
 ;;;; FTYPES
 
 (declaim ;; Named environment features.
@@ -299,6 +308,150 @@ If ENV is NIL, the current null lexical environment's one is returned."
       (let ((name (environment-name e)))
         (push name names)))))
 
+;;;; DEFINE-DECLARATION-SPECIFIER
+
+(defvar *declaration-specifiers* (make-hash-table :test #'eq))
+
+(define-condition missing-declaration-specifier (eprot-error cell-error)
+  ()
+  (:report
+   (lambda (this out)
+     (format out "Missing declaration specifier. ~S" (cell-error-name this)))))
+
+(defun find-declaration-spec (decl-name)
+  (or (gethash decl-name *declaration-specifiers*)
+      (error 'missing-declaration-specifier :name decl-name)))
+
+(defmacro decl-spec-bind (lambda-list <spec-form> &body body)
+  (let ((?spec-form (gensym "SPEC-FORM")))
+    `(let ((,?spec-form ,<spec-form>))
+       (funcall (the function (find-declaration-spec (car ,?spec-form)))
+                (cdr ,?spec-form))
+       (destructuring-bind ,lambda-list ,?spec-form ,@body))))
+
+(define-condition bad-declaration-specifier (eprot-error type-error)
+  ()
+  (:report
+   (lambda (this out)
+     (format out "~S is not ~S." (type-error-datum this)
+             (type-error-expected-type this)))))
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  ;; DECL-SPEC-ASSERTION is used in compile time so eval-when is needed.
+  (defun decl-spec-assertion (spec+)
+    (lambda (actual)
+      #+sbcl ; due to type specifier is dynamic.
+      (declare (sb-ext:muffle-conditions sb-ext:compiler-note))
+      (do ((args actual)
+           (lambda-list spec+)
+           (context :required))
+          ((if args
+               (if lambda-list
+                   nil
+                   (ecase context
+                     ((:required &optional) ; Too long.
+                      (error 'bad-declaration-specifier
+                             :datum actual
+                             :expected-type spec+))
+                     (&rest t)
+                     (&key ; Unknown key.
+                      (or (getf args :allow-other-keys)
+                          (error 'bad-declaration-specifier
+                                 :datum actual
+                                 :expected-type spec+)))
+                     (&allow-other-keys t)))
+               (or (null lambda-list)
+                   (find (car lambda-list) lambda-list-keywords)
+                   ;; Too short.
+                   (error 'bad-declaration-specifier
+                          :datum actual
+                          :expected-type spec+))))
+        (case (car lambda-list)
+          ((&optional &rest &key &allow-other-keys)
+           (psetq lambda-list (cdr lambda-list)
+                  context (car lambda-list)))
+          (otherwise
+           (ecase context
+             ((:required &optional)
+              (if (typep (car args) (car lambda-list))
+                  (setq args (cdr args)
+                        lambda-list (cdr lambda-list))
+                  (error 'bad-declaration-specifier
+                         :datum (car args)
+                         :expected-type (car lambda-list))))
+             (&rest
+              (if (every (lambda (elt) (typep elt (car lambda-list))) args)
+                  (setq lambda-list (cdr lambda-list))
+                  (error 'bad-declaration-specifier
+                         :datum args
+                         :expected-type (list context (car lambda-list)))))
+             (&key
+              (if (typep (getf args (caar lambda-list)) (cadar lambda-list))
+                  (setq args (uiop:remove-plist-key (caar lambda-list) args)
+                        lambda-list (cdr lambda-list))
+                  (error 'bad-declaration-specifier
+                         :datum (getf args (caar lambda-list))
+                         :expected-type (cadar lambda-list)))))))))))
+
+(defmacro define-declaration-specifier
+          (name (&rest spec+) &optional documentation)
+  `(progn
+    (setf (gethash ',name *declaration-specifiers*)
+            (decl-spec-assertion ',spec+))
+    ,@(when documentation
+        `((defmethod describe-object :after ((o (eql ',name)) out)
+            (funcall
+              (formatter
+               "~<~S names a ~S declaration specifier: ~2I~:@_Spec: ~S ~:@_~<Documentation: ~2I~:@_~A~:>~:>")
+              out
+              (list ',name ',(environment-name *environment*)
+                    (cons ',name ',spec+)
+                    (list (documentation ',name 'declaration-spec)))))
+          (defmethod documentation
+                     ((o (eql ',name)) (type (eql 'declaration-spec)))
+            ,documentation)))
+    ',name))
+
+(defun pprint-define-declaration-specifier (out exp &rest noise)
+  (declare (ignore noise))
+  (funcall (formatter "~:<~W~^ ~1I~:_~W~^ ~:_~W~^ ~_~@{~W~^ ~_~}~:>") out exp))
+
+(set-pprint-dispatch '(cons (member define-declaration-specifier))
+                     'pprint-define-declaration-specifier)
+
+(define-declaration-specifier special (&rest symbol)
+  "All of the variables named are to be considered special.")
+
+(define-declaration-specifier type (type-specifier &rest var-name)
+  "The variables mentioned will take on values only of the specified type.")
+
+(define-declaration-specifier ftype (ftype-specifier &rest function-name)
+  "The named functions will be of the functional type of the specified type.")
+
+(define-declaration-specifier inline (&rest function-name)
+  "Specifies that it is desirable for the compiler to open-code calls to the specified functions.")
+
+(define-declaration-specifier notinline (&rest function-name)
+  "Specifies that it is undesirable to compile the specified functions in-line.")
+
+(define-declaration-specifier ignore (&rest binding-name)
+  "Affects only variable bindings and specifies that the bindings of the specified variables are never used.")
+
+(define-declaration-specifier ignorable (&rest binding-name)
+  "Affects only variable bindings and specifies that the bindings of the specified variables may not be used.")
+
+(define-declaration-specifier optimize (&rest quality)
+  "Advises the compiler that each quality should be given attention according to the specified corresponding value.
+A quality is a symbol; standard qualities include speed (of the object code),
+space (both code size and run-time space), safety (run-time error checking),
+and compilation-speed (speed of the compilation process).")
+
+(define-declaration-specifier declaration (&rest declaration-name)
+  "Advises the compiler that each namej is a valid declaration name.")
+
+(define-declaration-specifier dynamic-extent (&rest binding-name)
+  "Certain variables or function-names refer to data objects whose extents may be regarded as dynamic.")
+
 ;;;; DEFINE-DECLARATION
 
 (defun list-all-declarations (&optional env)
@@ -326,54 +479,34 @@ If ENV is NIL, the current null lexical environment's one is returned."
                      'pprint-define-declaration)
 
 (define-declaration special (form env)
-  (destructuring-bind
-      (decl-name &rest vars)
+  (decl-spec-bind (decl-name &rest vars)
       form
     (extend :variable env vars)
     (values :variable (mapcar (lambda (var) (list var decl-name t)) vars))))
 
-(define-condition bad-declaration-specifier (eprot-error type-error)
-  ()
-  (:report
-   (lambda (this out)
-     (format out "~S is not ~S." (type-error-datum this)
-             (type-error-expected-type this)))))
-
 (define-declaration type (form env)
   (declare (list form))
-  (unless (< 2 (length form))
-    (error 'bad-declaration-specifier
-           :datum form
-           :expected-type '(decl-name type &rest vars)))
-  (destructuring-bind
-      (decl-name type &rest vars)
+  (decl-spec-bind (decl-name type &rest vars)
       form
     (extend :variable env vars)
     (values :variable (mapcar (lambda (var) (list var decl-name type)) vars))))
 
 (define-declaration ftype (form env)
   (declare (list form))
-  (unless (< 2 (length form))
-    (error 'bad-declaration-specifier
-           :datum form
-           :expected-type '(decl-name ftype &rest fun-names)))
-  (destructuring-bind
-      (decl-name ftype &rest names)
+  (decl-spec-bind (decl-name ftype &rest names)
       form
     (extend :function env names)
     (values :function
             (mapcar (lambda (var) (list var decl-name ftype)) names))))
 
 (define-declaration inline (form env)
-  (destructuring-bind
-      (decl-name &rest names)
+  (decl-spec-bind (decl-name &rest names)
       form
     (extend :function env names)
     (values :function (mapcar (lambda (var) (list var decl-name t)) names))))
 
 (define-declaration notinline (form env)
-  (destructuring-bind
-      (decl-name &rest names)
+  (decl-spec-bind (decl-name &rest names)
       form
     (extend :function env names)
     (values :function (mapcar (lambda (var) (list var decl-name t)) names))))
