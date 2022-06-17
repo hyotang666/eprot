@@ -29,6 +29,9 @@
            #:defenv
            #:in-environment
            #:list-all-environments
+           ;;;; DEFINE-DECLARATION-SPECIFIER
+           #:define-declaration-specifier
+           #:decl-spec-bind
            ;;;; MISCELLANEOUS HELPERS
            #:context
            ;;;; DECL-SPEC
