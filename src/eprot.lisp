@@ -151,7 +151,7 @@
 (deftype binding-name ()
   '(or var-name (cons (eql function) (cons function-name null))))
 
-(deftype type-specifier () '(satisfies millet:type-specifier-p))
+(deftype type-specifier () 't)
 
 (deftype ftype-specifier () '(or (eql function) (cons (eql function) *)))
 
