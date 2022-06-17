@@ -211,7 +211,7 @@
        ((null ,var) ,<return>)
     ,@body))
 
-;;;; SPECIAL VARIABLE
+;;;; NAMED ENVIRONMENT FEATURES.
 
 (defvar *environments* (make-hash-table :test #'eq))
 
