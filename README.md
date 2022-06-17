@@ -12,6 +12,7 @@ This is useful when you write a compiler that compiles S-Expression to something
 | eprot             | general-purpose |
 
 ## Usage
+See [glsl-env].
 
 ## From developer
 
@@ -38,4 +39,4 @@ SBCL
 <!-- Links -->
 [cl-environments]:https://github.com/alex-gutev/cl-environments
 [trucler]:https://github.com/s-expressionists/Trucler
-
+[glsl-env]:https://github.com/hyotang666/glsl-env
