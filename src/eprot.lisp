@@ -33,6 +33,7 @@
            #:define-declaration-specifier
            #:decl-spec-bind
            #:declaration-identifier
+           #:declaration-identifier-p
            ;;;; MISCELLANEOUS HELPERS
            #:context
            ;;;; DECL-SPEC
@@ -336,6 +337,9 @@ If ENV is NIL, the current null lexical environment's one is returned."
   (:report
    (lambda (this out)
      (format out "Missing declaration specifier. ~S" (cell-error-name this)))))
+
+(defun declaration-identifier-p (symbol)
+  (and (gethash symbol *declaration-specifiers*) t))
 
 (defun find-declaration-spec (declaration-identifier)
   (or (gethash declaration-identifier *declaration-specifiers*)
