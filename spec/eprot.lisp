@@ -628,7 +628,7 @@
 #?(list-all-declarations (find-environment :standard))
 :satisfies
 (lambda (list)
-  (& (null (set-difference list '(special type ftype inline notinline optimize declaration dynamic-extent)))))
+  (& (null (set-difference list '(special type ftype inline notinline optimize declaration dynamic-extent ignore ignorable)))))
 
 ;;;; Affected By:
 ; *environment* when optional arg is not specified.
