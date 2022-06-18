@@ -32,6 +32,7 @@
            ;;;; DEFINE-DECLARATION-SPECIFIER
            #:define-declaration-specifier
            #:decl-spec-bind
+           #:declaration-identifier
            ;;;; MISCELLANEOUS HELPERS
            #:context
            ;;;; DECL-SPEC
