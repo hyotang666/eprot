@@ -238,6 +238,9 @@
   (check-type env-name symbol)
   `(setf *environment* (find-environment ',env-name)))
 
+(defvar *null-env*
+  (make-environment :declaration-handlers (make-hash-table :test #'eq)))
+
 (defmacro defenv
           (env-name
            &key variable symbol-macro function macro declare handler
@@ -245,10 +248,9 @@
   (check-type env-name symbol)
   `(let ((*environment*
           ,(case use
-             ((nil)
-              `(make-environment :declaration-handlers (make-hash-table :test #'eq)))
-             (:standard `(copy-env nil))
-             (otherwise `(copy-env (find-environment ',use))))))
+             ((nil) *null-env*)
+             (:standard `(find-environment :standard))
+             (otherwise `(find-environment ',use)))))
      ,@(mapcan
          (lambda (definition)
            (destructuring-bind
