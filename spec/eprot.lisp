@@ -12,6 +12,32 @@
 #+syntax
 (declaration-identifier)
 
+(requirements-about DECLARATION-IDENTIFIER-P :doc-type function)
+
+;;;; Description:
+
+#+syntax (DECLARATION-IDENTIFIER-P SYMBOL) ; => result
+
+;;;; Arguments and Values:
+
+; symbol := Symbol that names declaration-identifier, otherwise nil.
+#?(declaration-identifier-p "not symbol") => NIL
+
+; result := boolean, be true when the SYMBOL is named as declaration-specifier, otherwise nil.
+#?(declaration-identifier-p 'special) => T
+#?(declaration-identifier-p 'no-such) => NIL
+
+;;;; Affected By:
+; Global declaration identifier database, i.e. eprot::*declaration-specifiers*.
+
+;;;; Side-Effects:
+; none
+
+;;;; Notes:
+; To define new declaration-identifier, see define-declaration, proclaim, and optionally define-declaration-specifier.
+
+;;;; Exceptional-Situations:
+
 (requirements-about ENVIRONMENT :doc-type STRUCTURE)
 
 ;;;; Description:
