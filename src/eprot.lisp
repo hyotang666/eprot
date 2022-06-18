@@ -515,6 +515,18 @@ and compilation-speed (speed of the compilation process).")
     (values :function
             (mapcar (lambda (var) (list var decl-name ftype)) names))))
 
+(define-declaration ignore (form env)
+  (declare (ignore env))
+  (decl-spec-bind (decl-name &rest binds)
+      form
+    (values :bind (mapcar (lambda (bind) (list bind decl-name t)) binds))))
+
+(define-declaration ignorable (form env)
+  (declare (ignore env))
+  (decl-spec-bind (decl-name &rest binds)
+      form
+    (values :bind (mapcar (lambda (bind) (list bind decl-name t)) binds))))
+
 (define-declaration inline (form env)
   (decl-spec-bind (decl-name &rest names)
       form
