@@ -4,6 +4,14 @@
 (in-package :eprot.spec)
 (setup :eprot)
 
+(requirements-about DECLARATION-IDENTIFIER :doc-type type)
+;;;; Description:
+; Any symbol can be a declaration-identifier.
+#?(typep 'any 'declaration-identifier) => T
+
+#+syntax
+(declaration-identifier)
+
 (requirements-about ENVIRONMENT :doc-type STRUCTURE)
 
 ;;;; Description:
