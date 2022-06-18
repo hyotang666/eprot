@@ -747,6 +747,25 @@ and compilation-speed (speed of the compilation process).")
                    (not (null-lexical-environment-p e))
                    (related-declarations var-name :variable e)))))))
 
+(defun declared-env (name &optional env)
+  (flet ((search-bind (name reader)
+           (do-env (e (or env (null-lexical-environment))
+                      (error "Missing environment that ~S is declared." name))
+             (when (find name (the list (funcall reader e)))
+               (return e)))))
+    (declare
+      (ftype (function (symbol function) (values environment &optional))
+             search-bind))
+    (etypecase name
+      (symbol (search-bind name #'environment-variable))
+      ((cons (eql function) (cons symbol null))
+       (search-bind (cadr name) #'environment-function)))))
+
+(defun (setf variable-information) (new-decl var-name &optional env)
+  (let ((*environment* (declared-env var-name env)))
+    (proclaim new-decl)
+    new-decl))
+
 ;;; FUNCTION-INFORMATION.
 
 (defun function-information (fun-name &optional env)
