@@ -136,7 +136,7 @@
 
 (deftype lexicalp () 'boolean)
 
-(deftype declaration-name () 'symbol)
+(deftype declaration-identifier () 'symbol)
 
 (deftype macro-name () 'symbol)
 
@@ -180,7 +180,8 @@
                          declaration-alist
                          &optional))
                 function-information)
-         (ftype (function (declaration-name &optional (or null environment))
+         (ftype (function
+                 (declaration-identifier &optional (or null environment))
                  (values t &optional))
                 declaration-information)
          (ftype (function
@@ -335,9 +336,9 @@ If ENV is NIL, the current null lexical environment's one is returned."
    (lambda (this out)
      (format out "Missing declaration specifier. ~S" (cell-error-name this)))))
 
-(defun find-declaration-spec (decl-name)
-  (or (gethash decl-name *declaration-specifiers*)
-      (error 'missing-declaration-specifier :name decl-name)))
+(defun find-declaration-spec (declaration-identifier)
+  (or (gethash declaration-identifier *declaration-specifiers*)
+      (error 'missing-declaration-specifier :name declaration-identifier)))
 
 (defmacro decl-spec-bind (lambda-list <spec-form> &body body)
   (let ((?spec-form (gensym "SPEC-FORM")))
@@ -462,7 +463,7 @@ A quality is a symbol; standard qualities include speed (of the object code),
 space (both code size and run-time space), safety (run-time error checking),
 and compilation-speed (speed of the compilation process).")
 
-(define-declaration-specifier declaration (&rest declaration-name)
+(define-declaration-specifier declaration (&rest declaration-identifier)
   "Advises the compiler that each namej is a valid declaration name.")
 
 (define-declaration-specifier dynamic-extent (&rest binding-name)
@@ -471,8 +472,9 @@ and compilation-speed (speed of the compilation process).")
 ;;;; DEFINE-DECLARATION
 
 (defun list-all-declarations (&optional env)
-  (loop :for decl-name :being :each :hash-key :of (declaration-handlers env)
-        :collect decl-name))
+  (loop :for declaration-identifier :being :each :hash-key :of
+             (declaration-handlers env)
+        :collect declaration-identifier))
 
 (defun extend (type env contents)
   "Destructively extend the specified TYPE slot of the ENV with CONTENTS."
@@ -481,11 +483,12 @@ and compilation-speed (speed of the compilation process).")
     (:function (alexandria:unionf (environment-function env) contents)))
   env)
 
-(defmacro define-declaration (decl-name lambda-list &body body)
+(defmacro define-declaration (declaration-identifier lambda-list &body body)
   `(progn
-    (setf (gethash ',decl-name (declaration-handlers *environment*))
+    (setf (gethash ',declaration-identifier
+                   (declaration-handlers *environment*))
             (lambda ,lambda-list ,@body))
-    ',decl-name))
+    ',declaration-identifier))
 
 (defun pprint-define-declaration (out exp &rest noise)
   (declare (ignore noise))
@@ -495,49 +498,59 @@ and compilation-speed (speed of the compilation process).")
                      'pprint-define-declaration)
 
 (define-declaration special (form env)
-  (decl-spec-bind (decl-name &rest vars)
+  (decl-spec-bind (declaration-identifier &rest vars)
       form
     (extend :variable env vars)
-    (values :variable (mapcar (lambda (var) (list var decl-name t)) vars))))
+    (values :variable
+            (mapcar (lambda (var) (list var declaration-identifier t)) vars))))
 
 (define-declaration type (form env)
   (declare (list form))
-  (decl-spec-bind (decl-name type &rest vars)
+  (decl-spec-bind (declaration-identifier type &rest vars)
       form
     (extend :variable env vars)
-    (values :variable (mapcar (lambda (var) (list var decl-name type)) vars))))
+    (values :variable
+            (mapcar (lambda (var) (list var declaration-identifier type))
+                    vars))))
 
 (define-declaration ftype (form env)
   (declare (list form))
-  (decl-spec-bind (decl-name ftype &rest names)
+  (decl-spec-bind (declaration-identifier ftype &rest names)
       form
     (extend :function env names)
     (values :function
-            (mapcar (lambda (var) (list var decl-name ftype)) names))))
+            (mapcar (lambda (var) (list var declaration-identifier ftype))
+                    names))))
 
 (define-declaration ignore (form env)
   (declare (ignore env))
-  (decl-spec-bind (decl-name &rest binds)
+  (decl-spec-bind (declaration-identifier &rest binds)
       form
-    (values :bind (mapcar (lambda (bind) (list bind decl-name t)) binds))))
+    (values :bind
+            (mapcar (lambda (bind) (list bind declaration-identifier t))
+                    binds))))
 
 (define-declaration ignorable (form env)
   (declare (ignore env))
-  (decl-spec-bind (decl-name &rest binds)
+  (decl-spec-bind (declaration-identifier &rest binds)
       form
-    (values :bind (mapcar (lambda (bind) (list bind decl-name t)) binds))))
+    (values :bind
+            (mapcar (lambda (bind) (list bind declaration-identifier t))
+                    binds))))
 
 (define-declaration inline (form env)
-  (decl-spec-bind (decl-name &rest names)
+  (decl-spec-bind (declaration-identifier &rest names)
       form
     (extend :function env names)
-    (values :function (mapcar (lambda (var) (list var decl-name t)) names))))
+    (values :function
+            (mapcar (lambda (var) (list var declaration-identifier t)) names))))
 
 (define-declaration notinline (form env)
-  (decl-spec-bind (decl-name &rest names)
+  (decl-spec-bind (declaration-identifier &rest names)
       form
     (extend :function env names)
-    (values :function (mapcar (lambda (var) (list var decl-name t)) names))))
+    (values :function
+            (mapcar (lambda (var) (list var declaration-identifier t)) names))))
 
 (define-declaration optimize (form env)
   (declare (ignore env))
@@ -551,8 +564,8 @@ and compilation-speed (speed of the compilation process).")
                   (cdr form)))))
 
 (define-declaration declaration (form env)
-  (dolist (decl-name (cdr form))
-    (setf (gethash decl-name (declaration-handlers env)) nil))
+  (dolist (declaration-identifier (cdr form))
+    (setf (gethash declaration-identifier (declaration-handlers env)) nil))
   (values :declare form))
 
 (define-declaration dynamic-extent (form env)
@@ -593,10 +606,11 @@ and compilation-speed (speed of the compilation process).")
                      (cdr decl-form))))
     (t (warn 'unknown-declaration :name (car decl-form)))))
 
-(defun declaration-handler (decl-name &optional env)
+(defun declaration-handler (declaration-identifier &optional env)
   (if env
-      ;; in order to accept { decl-name : nil } as just known declaration by proclaim.
-      (or (gethash decl-name (declaration-handlers env)) 'default-decl-handler)
+      ;; in order to accept { declaration-identifier : nil } as just known declaration by proclaim.
+      (or (gethash declaration-identifier (declaration-handlers env))
+          'default-decl-handler)
       'default-decl-handler))
 
 (defun parse-declaration-spec (decl-spec &optional env)
@@ -756,17 +770,17 @@ and compilation-speed (speed of the compilation process).")
 
 ;;; DECLARATION-INFORMATION
 
-(defun declaration-information (decl-name &optional env)
+(defun declaration-information (declaration-identifier &optional env)
   ;; CLTL2 recommends there error checks.
   #-sbcl
   (progn
-   (check-type decl-name declaration-name)
+   (check-type declaration-identifier declaration-identifier)
    (unless (typep env '(or null environment))
      (error 'type-error :datum env :expected-type '(or null environment))))
   (uiop:while-collecting (acc)
     (do-env (e (or env (null-lexical-environment)))
       (dolist (spec (environment-declare e))
-        (if (eq decl-name (decl-spec-type spec))
+        (if (eq declaration-identifier (decl-spec-type spec))
             (acc (decl-spec-info spec)))))))
 
 ;;;; PARSE-MACRO
