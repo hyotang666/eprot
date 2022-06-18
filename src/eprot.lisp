@@ -247,10 +247,17 @@
            (use :standard))
   (check-type env-name symbol)
   `(let ((*environment*
-          ,(case use
-             ((nil) *null-env*)
-             (:standard `(find-environment :standard))
-             (otherwise `(find-environment ',use)))))
+          (let ((*environment*
+                 ,(case use
+                    ((nil) *null-env*)
+                    (:standard `(find-environment :standard))
+                    (otherwise `(find-environment ',use)))))
+            (augment-environment nil
+                                 :variable ,variable
+                                 :symbol-macro ,symbol-macro
+                                 :function ,function
+                                 :macro ,macro
+                                 :name ',env-name))))
      ,@(mapcan
          (lambda (definition)
            (destructuring-bind
@@ -260,17 +267,12 @@
                  (alexandria:parse-body body :documentation t)
                `(,@(when spec
                      `((define-declaration-specifier ,name ,spec
-                         ,@(and doc (list doc)))))
+                         ,doc
+                         ,env-name)))
                  (define-declaration ,name ,lambda-list ,@decls ,@forms)))))
          handler)
-     (store-environment ',env-name
-                        (augment-environment nil
-                                             :variable ,variable
-                                             :symbol-macro ,symbol-macro
-                                             :function ,function
-                                             :macro ,macro
-                                             :declare ,declare
-                                             :name ',env-name))
+     (mapc #'proclaim ,declare)
+     (store-environment ',env-name *environment*)
      ',env-name))
 
 (defun pprint-defenv (out exp &rest noise)
@@ -409,7 +411,7 @@ If ENV is NIL, the current null lexical environment's one is returned."
                          :expected-type (cadar lambda-list)))))))))))
 
 (defmacro define-declaration-specifier
-          (name (&rest spec+) &optional documentation)
+          (name (&rest spec+) &optional documentation (env-name :standard))
   `(progn
     (setf (gethash ',name *declaration-specifiers*)
             (decl-spec-assertion ',spec+))
@@ -419,8 +421,7 @@ If ENV is NIL, the current null lexical environment's one is returned."
               (formatter
                "~<~S names a ~S declaration specifier: ~2I~:@_Spec: ~S ~:@_~<Documentation: ~2I~:@_~A~:>~:>")
               out
-              (list ',name ',(environment-name *environment*)
-                    (cons ',name ',spec+)
+              (list ',name ',env-name (cons ',name ',spec+)
                     (list (documentation ',name 'declaration-spec)))))
           (defmethod documentation
                      ((o (eql ',name)) (type (eql 'declaration-spec)))
