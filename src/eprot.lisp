@@ -416,8 +416,9 @@ If ENV is NIL, the current null lexical environment's one is returned."
                 (if (typep (getf args (caar lambda-list)) (cadar lambda-list))
                     (setq args (uiop:remove-plist-key (caar lambda-list) args)
                           lambda-list (cdr lambda-list))
-                    (bad-specifier :datum (getf args (caar lambda-list))
-                                   :expected (cadar lambda-list))))))))))))
+                    (bad-specifier :datum (list (caar lambda-list)
+                                                (getf args (caar lambda-list)))
+                                   :expected (car lambda-list))))))))))))
 
 (defmacro define-declaration-specifier
           (name (&rest spec+) &optional documentation (env-name :standard))
