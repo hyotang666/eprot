@@ -2,7 +2,7 @@
 (in-package :asdf)
 (defsystem "eprot.test"
   :version
-  "0.15.0"
+  "0.16.0"
   :depends-on
   (:jingoh "eprot")
   :components

@@ -716,3 +716,52 @@
 ; If DECL-NAME is unknown, an error is signaled.
 #?(proclaim '(no-such declaration)) :signals unknown-declaration
 
+(requirements-about DECL-SPEC-ASSERTION :doc-type function)
+
+;;;; Description:
+; Internal use.
+
+#+syntax (DECL-SPEC-ASSERTION SPEC+) ; => result
+
+;;;; Arguments and Values:
+
+; spec+ := 
+
+; result := 
+
+;;;; Affected By:
+
+;;;; Side-Effects:
+
+;;;; Notes:
+
+;;;; Exceptional-Situations:
+
+;;;; Tests.
+; The case when too long requirement args.
+#?(funcall (eprot::decl-spec-assertion '(symbol)) '(id too long))
+:signals bad-declaration-specifier
+; The case unknown key comes.
+#?(funcall (eprot::decl-spec-assertion '(&key (:known symbol))) '(id :unknown :key))
+:signals bad-declaration-specifier
+; The case unknown key comes but specifid :allow-other-keys t
+#?(funcall (eprot::decl-spec-assertion '(&key (:known symbol))) '(id :unknown :key :allow-other-keys t))
+=> NIL
+; The case unknown key comes but specifid &allow-other-keys
+#?(funcall (eprot::decl-spec-assertion '(&key (:known symbol) &allow-other-keys)) '(id :unknown :key))
+=> NIL
+; The case when required args are too short.
+#?(funcall (eprot::decl-spec-assertion '(symbol)) '(id))
+:signals bad-declaration-specifier
+; The case type mismatch in required arguments.
+#?(funcall (eprot::decl-spec-assertion '(symbol)) '(id "not symbol"))
+:signals bad-declaration-specifier
+; The case type mismatch in optional arguments.
+#?(funcall (eprot::decl-spec-assertion '(&optional symbol)) '(id "not symbol"))
+:signals bad-declaration-specifier
+; The case type mismatch in rest arguments.
+#?(funcall (eprot::decl-spec-assertion '(&rest symbol)) '(id "not symbol"))
+:signals bad-declaration-specifier
+; The case type mismatch in keyword arguments.
+#?(funcall (eprot::decl-spec-assertion '(&key (:name symbol))) '(id :name "not symbol"))
+:signals bad-declaration-specifier
