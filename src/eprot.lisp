@@ -359,66 +359,62 @@ If ENV is NIL, the current null lexical environment's one is returned."
      (format out "~S is not ~S for ~S." (type-error-datum this)
              (type-error-expected-type this) (cell-error-name this)))))
 
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  ;; DECL-SPEC-ASSERTION is used in compile time so eval-when is needed.
-  (defun decl-spec-assertion (spec+)
-    (lambda (actual)
-      #+sbcl ; due to type specifier is dynamic.
-      (declare (sb-ext:muffle-conditions sb-ext:compiler-note))
-      (flet ((bad-specifier (&key datum expected)
-               (error 'bad-declaration-specifier
-                      :name (car actual)
-                      :datum datum
-                      :expected-type expected)))
-        (do ((args (cdr actual))
-             (lambda-list spec+)
-             (context :required))
-            ((if args
-                 (if lambda-list
-                     ;; Both args and lambda-list remains, go next loop.
-                     nil
-                     ;; Args but no lambda-list.
-                     (ecase context
-                       ((:required &optional) ; Too long.
-                        (bad-specifier :datum (cdr actual) :expected spec+))
-                       (&rest t)
-                       (&key ; Unknown key.
-                        (or (getf args :allow-other-keys)
-                            (bad-specifier :datum (cdr actual)
-                                           :expected spec+)))
-                       (&allow-other-keys t)))
-                 (or ;; Both args and lambda-list are null.
-                     (null lambda-list)
-                     ;; No args but lambda-list.
-                     ;; Lmabda-list-keywords means its optional.
-                     (find (car lambda-list) lambda-list-keywords)
-                     ;; Too short.
-                     (bad-specifier :datum (cdr actual) :expected spec+))))
-          (case (car lambda-list)
-            ((&optional &rest &key &allow-other-keys)
-             (psetq lambda-list (cdr lambda-list)
-                    context (car lambda-list)))
-            (otherwise
-             (ecase context
-               ((:required &optional)
-                (if (typep (car args) (car lambda-list))
-                    (setq args (cdr args)
-                          lambda-list (cdr lambda-list))
-                    (bad-specifier :datum (car args)
-                                   :expected (car lambda-list))))
-               (&rest
-                (if (every (lambda (elt) (typep elt (car lambda-list))) args)
-                    (setq lambda-list (cdr lambda-list))
-                    (bad-specifier :datum args
-                                   :expected (list context
-                                                   (car lambda-list)))))
-               (&key
-                (if (typep (getf args (caar lambda-list)) (cadar lambda-list))
-                    (setq args (uiop:remove-plist-key (caar lambda-list) args)
-                          lambda-list (cdr lambda-list))
-                    (bad-specifier :datum (list (caar lambda-list)
-                                                (getf args (caar lambda-list)))
-                                   :expected (car lambda-list))))))))))))
+(defun decl-spec-assertion (spec+)
+  (lambda (actual)
+    #+sbcl ; due to type specifier is dynamic.
+    (declare (sb-ext:muffle-conditions sb-ext:compiler-note))
+    (flet ((bad-specifier (&key datum expected)
+             (error 'bad-declaration-specifier
+                    :name (car actual)
+                    :datum datum
+                    :expected-type expected)))
+      (do ((args (cdr actual))
+           (lambda-list spec+)
+           (context :required))
+          ((if args
+               (if lambda-list
+                   ;; Both args and lambda-list remains, go next loop.
+                   nil
+                   ;; Args but no lambda-list.
+                   (ecase context
+                     ((:required &optional) ; Too long.
+                      (bad-specifier :datum (cdr actual) :expected spec+))
+                     (&rest t)
+                     (&key ; Unknown key.
+                      (or (getf args :allow-other-keys)
+                          (bad-specifier :datum (cdr actual) :expected spec+)))
+                     (&allow-other-keys t)))
+               (or ;; Both args and lambda-list are null.
+                   (null lambda-list)
+                   ;; No args but lambda-list.
+                   ;; Lmabda-list-keywords means its optional.
+                   (find (car lambda-list) lambda-list-keywords)
+                   ;; Too short.
+                   (bad-specifier :datum (cdr actual) :expected spec+))))
+        (case (car lambda-list)
+          ((&optional &rest &key &allow-other-keys)
+           (psetq lambda-list (cdr lambda-list)
+                  context (car lambda-list)))
+          (otherwise
+           (ecase context
+             ((:required &optional)
+              (if (typep (car args) (car lambda-list))
+                  (setq args (cdr args)
+                        lambda-list (cdr lambda-list))
+                  (bad-specifier :datum (car args)
+                                 :expected (car lambda-list))))
+             (&rest
+              (if (every (lambda (elt) (typep elt (car lambda-list))) args)
+                  (setq lambda-list (cdr lambda-list))
+                  (bad-specifier :datum args
+                                 :expected (list context (car lambda-list)))))
+             (&key
+              (if (typep (getf args (caar lambda-list)) (cadar lambda-list))
+                  (setq args (uiop:remove-plist-key (caar lambda-list) args)
+                        lambda-list (cdr lambda-list))
+                  (bad-specifier :datum (list (caar lambda-list)
+                                              (getf args (caar lambda-list)))
+                                 :expected (car lambda-list)))))))))))
 
 (defmacro define-declaration-specifier
           (name (&rest spec+) &optional documentation (env-name :standard))
